@@ -1,8 +1,10 @@
 package etu.wollen.vk;
 
+import java.text.SimpleDateFormat;
+import java.util.Comparator;
 import java.util.Date;
 
-public class WallPost {
+public class WallPost{
 	private long post_id;
 	private long group_id;
 	private long signer_id;
@@ -18,7 +20,9 @@ public class WallPost {
 	}
 	
 	public void print(){
-		System.out.println(getPostUrl()+" Date = "+date);
+		SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy 'at' HH:mm:ss");
+		System.out.println(getPostUrl());
+		System.out.println(dateFormat.format(date));
 		System.out.println(text);
 	}
 	
@@ -65,4 +69,21 @@ public class WallPost {
 	public void setText(String text) {
 		this.text = text;
 	}
+}
+
+class WPcomparator implements Comparator<WallPost>{
+
+	@Override
+	public int compare(WallPost w1, WallPost w2) {
+		if(w1.getDate().getTime()-w2.getDate().getTime() < 0){
+			return -1;
+		}
+		else if(w1.getDate().getTime()-w2.getDate().getTime() == 0){
+			return 0;
+		}
+		else{
+			return 1;
+		}
+	}
+	
 }

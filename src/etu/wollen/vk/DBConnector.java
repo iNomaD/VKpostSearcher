@@ -101,11 +101,25 @@ public class DBConnector {
 	public static ArrayList<WallPost> getPostsFromWall(long wall_id) throws SQLException {
 		ArrayList<WallPost> posts = new ArrayList<WallPost>();
 		Statement stat = conn.createStatement();
-		ResultSet resSet = stat.executeQuery("SELECT * FROM " + POSTS_TABLE_NAME + " WHERE GROUP_ID = " + wall_id);
+		ResultSet resSet = stat.executeQuery("SELECT * FROM " + POSTS_TABLE_NAME + " WHERE "+POST_GROUP_NAME+" = " + wall_id);
 		while (resSet.next()) {
 			long post_id = resSet.getLong(POST_ID_NAME);
 			long group_id = resSet.getLong(POST_GROUP_NAME);
 			long signer_id = resSet.getLong(POST_SIGNER_ID_NAME);
+			long date = resSet.getLong(POST_DATE_NAME);
+			String text = resSet.getString(POST_TEXT_NAME);
+			posts.add(new WallPost(post_id, group_id, signer_id, new Date(date), text));
+		}
+		return posts;
+	}
+	
+	public static ArrayList<WallPost> getPostsBySinger(long signer_id) throws SQLException {
+		ArrayList<WallPost> posts = new ArrayList<WallPost>();
+		Statement stat = conn.createStatement();
+		ResultSet resSet = stat.executeQuery("SELECT * FROM " + POSTS_TABLE_NAME + " WHERE "+POST_SIGNER_ID_NAME+" = " + signer_id);
+		while (resSet.next()) {
+			long post_id = resSet.getLong(POST_ID_NAME);
+			long group_id = resSet.getLong(POST_GROUP_NAME);
 			long date = resSet.getLong(POST_DATE_NAME);
 			String text = resSet.getString(POST_TEXT_NAME);
 			posts.add(new WallPost(post_id, group_id, signer_id, new Date(date), text));
@@ -126,6 +140,22 @@ public class DBConnector {
 			long group_id = resSet.getLong(COMMENT_GROUP_ID_NAME);
 			long post_id = resSet.getLong(COMMENT_POST_ID_NAME);
 			posts.add(new WallComment(comment_id, from_id, new Date(date), text, group_id, post_id));
+		}
+		return posts;
+	}
+	
+	public static ArrayList<WallComment> getCommentsBySigner(long signer_id) throws SQLException {
+		ArrayList<WallComment> posts = new ArrayList<WallComment>();
+		Statement stat = conn.createStatement();
+		ResultSet resSet = stat.executeQuery("SELECT * FROM " + COMMENTS_TABLE_NAME + " WHERE "+COMMENT_FROM_ID_NAME+" = " + signer_id);
+		while (resSet.next()) {
+			
+			long comment_id = resSet.getLong(COMMENT_ID_NAME);
+			long date = resSet.getLong(COMMENT_DATE_NAME);
+			String text = resSet.getString(COMMENT_TEXT_NAME);
+			long group_id = resSet.getLong(COMMENT_GROUP_ID_NAME);
+			long post_id = resSet.getLong(COMMENT_POST_ID_NAME);
+			posts.add(new WallComment(comment_id, signer_id, new Date(date), text, group_id, post_id));
 		}
 		return posts;
 	}

@@ -1,5 +1,7 @@
 package etu.wollen.vk;
 
+import java.text.SimpleDateFormat;
+import java.util.Comparator;
 import java.util.Date;
 
 public class WallComment {
@@ -20,8 +22,14 @@ public class WallComment {
 	}
 	
 	public void print(){
-		System.out.println(comment_id+" "+from_id+" "+date+" from "+"http://vk.com/wall"+group_id+"_"+post_id);
+		SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy 'at' HH:mm:ss");
+		System.out.println(getPostUrl());
+		System.out.println(dateFormat.format(date));
 		System.out.println(text);
+	}
+	
+	public String getPostUrl(){
+		return "http://vk.com/wall"+group_id+"_"+post_id;
 	}
 
 	public long getFrom_id() {
@@ -71,4 +79,21 @@ public class WallComment {
 	public void setPost_id(long post_id) {
 		this.post_id = post_id;
 	}
+}
+
+class WCcomparator implements Comparator<WallComment>{
+
+	@Override
+	public int compare(WallComment w1, WallComment w2) {
+		if(w1.getDate().getTime()-w2.getDate().getTime() < 0){
+			return -1;
+		}
+		else if(w1.getDate().getTime()-w2.getDate().getTime() == 0){
+			return 0;
+		}
+		else{
+			return 1;
+		}
+	}
+	
 }

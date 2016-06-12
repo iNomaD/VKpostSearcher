@@ -1,19 +1,15 @@
 package etu.wollen.vk;
 
 import java.io.BufferedReader;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintStream;
-import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import org.json.simple.JSONArray;
@@ -21,84 +17,10 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
 public class PostDownloader {
-	private static long id_to_find = 1;
-	private static Date dateRestr = new Date();
+	private Map<Long, String> groupNames = new HashMap<Long, String>();
 	private static final boolean showInfo = false;
 
-	public static void main(String[] args) {
-		PostDownloader pd = new PostDownloader();
-
-		try {
-			// connect and create DB
-			DBConnector.connect();
-			// DBConnector.deleteDB();
-			DBConnector.createDB();
-
-			// gather groups to search from file
-			ArrayList<String> grList = pd.parseFileGroups("gr_list.txt");
-			System.out.println("Parsing " + grList.size() + " groups: " + grList);
-
-			// get set of group ids using list of short names
-			Set<Long> grSet = new HashSet<Long>(pd.getGroupIds(grList));
-
-			// if started with -skip then skip parsing group, just search
-			if (!(args.length > 0 && args[0].equals("-skip"))) {
-				pd.parseGroups(grSet);
-			} else {
-				System.out.println("Parsing skipped!");
-			}
-
-			// start searching for comments and posts, results to file
-			System.out.println("Start searching... id=" + id_to_find + " after date: " + dateRestr);
-			String outname = "output.txt";
-			PrintStream st = new PrintStream(new FileOutputStream(outname));
-			PrintStream standard = System.out;
-			System.setOut(st);
-			pd.findPosts(id_to_find, grSet);
-			pd.findComments(id_to_find, grSet);
-			System.setOut(standard);
-			System.out.println("Program finished! Results in file: " + outname);
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	public ArrayList<String> parseFileGroups(String filename) throws IOException {
-		ArrayList<String> grList = new ArrayList<String>();
-
-		BufferedReader br = null;
-		try {
-			br = new BufferedReader(new FileReader(filename));
-			String id_str = br.readLine();
-			id_to_find = Long.parseLong(id_str);
-			System.out.println("ID to find: " + id_to_find);
-
-			String date_str = br.readLine();
-			String[] pts = date_str.split("\\.");
-			Calendar cal = Calendar.getInstance();
-			cal.set(Integer.parseInt(pts[2]), Integer.parseInt(pts[1]) - 1, Integer.parseInt(pts[0]));
-			dateRestr = cal.getTime();
-			System.out.println("Date restriction: " + dateRestr);
-
-			String line = null;
-			while ((line = br.readLine()) != null) {
-				if (!line.equals("")) {
-					line = line.replaceAll(".*/", "");
-					grList.add(line);
-				}
-			}
-		} catch (IOException e) {
-			System.out.println("Error reading file");
-			e.printStackTrace();
-		} finally {
-			br.close();
-		}
-
-		return grList;
-	}
-
-	public ArrayList<Long> getGroupIds(ArrayList<String> groupShortNames) {
+	public void fillGroupNames(ArrayList<String> groupShortNames) {
 		ArrayList<Long> groupIds = new ArrayList<Long>();
 		if (!groupShortNames.isEmpty()) {
 			String request = "http://api.vk.com/method/groups.getById?group_ids=";
@@ -106,7 +28,7 @@ public class PostDownloader {
 				request += gr + ",";
 			}
 			try {
-				String response = sendGETtimeout(request, 5);
+				String response = sendGETtimeout(request, 11);
 
 				JSONParser jp = new JSONParser();
 				JSONObject jsonresponse = (JSONObject) jp.parse(response);
@@ -114,49 +36,29 @@ public class PostDownloader {
 				for (Object oitem : items) {
 					JSONObject item = (JSONObject) oitem;
 					long gid = (long) item.get("gid");
+					String name = (String) item.get("name");
 					groupIds.add(gid);
+					groupNames.put(gid, name);
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
-
-		return groupIds;
+	}
+	
+	public Set<Long> getGroupSet(){
+		return groupNames.keySet();
 	}
 
-	public void parseGroups(Set<Long> groupIds) {
-		int count = 0;
-		for (Long wall_id : groupIds) {
-			System.out.println("Parsing vk.com/club" + wall_id + "    " + count + " of " + groupIds.size());
-			getPosts(wall_id * (-1));
+	public void parseGroups(Date dateRestr) {
+		int count = 1;
+		for (Map.Entry<Long, String> group : groupNames.entrySet()) {
+			Long wall_id = group.getKey();
+			String wall_name = group.getValue();
+			System.out.println("Parsing vk.com/club" + wall_id + " ("+wall_name+")    " + count + " of " + groupNames.size());
+			getPosts(wall_id * (-1), dateRestr);
 			++count;
 		}
-	}
-
-	public void findPosts(long signer_id, Set<Long> set) throws SQLException {
-		ArrayList<WallPost> wp = DBConnector.getAllPosts();
-		int count = 0;
-		for (WallPost w : wp) {
-			if (w.getSigner_id() == signer_id && set.contains(w.getGroup_id() * (-1))
-					&& w.getDate().getTime() >= dateRestr.getTime()) {
-				w.print();
-				++count;
-			}
-		}
-		System.out.println(count + " posts found!" + System.lineSeparator() + System.lineSeparator());
-	}
-
-	public void findComments(long signer_id, Set<Long> set) throws SQLException {
-		ArrayList<WallComment> wc = DBConnector.getAllComments();
-		int count = 0;
-		for (WallComment w : wc) {
-			if (w.getFrom_id() == signer_id && set.contains(w.getGroup_id() * (-1))
-					&& w.getDate().getTime() >= dateRestr.getTime()) {
-				w.print();
-				++count;
-			}
-		}
-		System.out.println(count + " comments found!");
 	}
 
 	public static void printAllPosts() throws SQLException {
@@ -193,7 +95,8 @@ public class PostDownloader {
 		for (int i = 0; i < attempts; ++i) {
 			try {
 				response = sendGET(request);
-			} catch (ConnectException e) {
+				break; //exit cycle
+			} catch (Exception e) {
 				if (i < attempts - 1) {
 					System.out.println("Connection timed out... " + (attempts - i - 1) + " more attempts...");
 				} else {
@@ -204,7 +107,7 @@ public class PostDownloader {
 		return response;
 	}
 
-	public void getPosts(long wall_id) {
+	public void getPosts(long wall_id, Date dateRestr) {
 		long offset = 0;
 		long count = 100;
 
@@ -222,7 +125,7 @@ public class PostDownloader {
 						+ "&count=" + count + "&v=5.45";
 				offset += 100;
 
-				String response = sendGETtimeout(request, 5);
+				String response = sendGETtimeout(request, 11);
 
 				JSONParser jp = new JSONParser();
 				JSONObject jsonresponse = (JSONObject) jp.parse(response);
@@ -298,11 +201,11 @@ public class PostDownloader {
 			boolean allRead = false;
 
 			while (!allRead) {
-				String request = "https://api.vk.com/method/wall.getComments?owner_id=" + wall_id + "&post_id="
+				String request = "http://api.vk.com/method/wall.getComments?owner_id=" + wall_id + "&post_id="
 						+ post_id + "&offset=" + offset + "&count=" + count + "&v=5.45";
 				offset += 100;
 
-				String response = sendGETtimeout(request, 5);
+				String response = sendGETtimeout(request, 11);
 				// System.out.println(response);
 
 				JSONParser jp = new JSONParser();

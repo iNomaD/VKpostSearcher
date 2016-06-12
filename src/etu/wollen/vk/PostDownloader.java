@@ -76,7 +76,7 @@ public class PostDownloader {
 	}
 
 	// send GET and return response in UTF-8
-	private String sendGET(String urlToRead) throws Exception {
+	private static String sendGET(String urlToRead) throws Exception {
 		StringBuilder result = new StringBuilder();
 		URL url = new URL(urlToRead);
 		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -90,7 +90,7 @@ public class PostDownloader {
 		return result.toString();
 	}
 
-	private String sendGETtimeout(String request, int attempts) throws Exception {
+	public static String sendGETtimeout(String request, int attempts) throws Exception {
 		String response = "";
 		for (int i = 0; i < attempts; ++i) {
 			try {

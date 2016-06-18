@@ -8,10 +8,11 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 public class DBConnector {
-	public static Connection conn = null;
-
+	private static Connection conn = null;
+	
 	public static String POSTS_TABLE_NAME = "POSTS";
 	public static String POST_ID_NAME = "POST_ID";
 	public static String POST_GROUP_NAME = "GROUP_ID";
@@ -29,9 +30,12 @@ public class DBConnector {
 
 	public static void connect() throws ClassNotFoundException, SQLException {
 		Class.forName("org.sqlite.JDBC");
-		conn = DriverManager.getConnection("jdbc:sqlite:vkgroups.s3db");
-
+		conn = getConnection();
 		System.out.println("DB connected!");
+	}
+	
+	private static Connection getConnection() throws SQLException {
+		return DriverManager.getConnection("jdbc:sqlite:vkgroups.s3db");
 	}
 
 	public static void deleteDB() throws SQLException {
@@ -70,6 +74,22 @@ public class DBConnector {
 		prep.executeBatch();
 	}
 	
+	public static void insertPosts(List<WallPost> wpl) throws SQLException {
+		PreparedStatement prep = conn.prepareStatement("INSERT INTO " + POSTS_TABLE_NAME + " (" + POST_ID_NAME + ", "
+				+ POST_GROUP_NAME + ", " + POST_SIGNER_ID_NAME + ", " + POST_DATE_NAME + ", " + POST_TEXT_NAME
+				+ ") VALUES (?, ?, ?, ?, ?); ");
+	
+		for(WallPost wp : wpl){
+			prep.setLong(1, wp.getPost_id());
+			prep.setLong(2, wp.getGroup_id());
+			prep.setLong(3, wp.getSigner_id());
+			prep.setLong(4, wp.getDate().getTime());
+			prep.setString(5, wp.getText());
+			prep.addBatch();
+		}
+		prep.executeBatch();
+	}
+	
 	public static void insertComment(WallComment wc) throws SQLException{
 		PreparedStatement prep = conn.prepareStatement("INSERT INTO "+COMMENTS_TABLE_NAME+ " VALUES (?, ?, ?, ?, ?, ?, ?);");
 		
@@ -81,6 +101,37 @@ public class DBConnector {
 		prep.setLong(7, wc.getPost_id());
 		prep.addBatch();
 		prep.executeBatch();
+	}
+	
+	public static void insertComments(List<WallComment> wcl) throws SQLException{
+		PreparedStatement prep = conn.prepareStatement("INSERT INTO "+COMMENTS_TABLE_NAME+ " VALUES (?, ?, ?, ?, ?, ?, ?);");
+		
+		for(WallComment wc : wcl){
+			prep.setLong(2, wc.getComment_id());
+			prep.setLong(3, wc.getFrom_id());
+			prep.setLong(4, wc.getDate().getTime());
+			prep.setString(5, wc.getText());
+			prep.setLong(6, wc.getGroup_id());
+			prep.setLong(7, wc.getPost_id());
+			prep.addBatch();
+		}
+		prep.executeBatch();
+	}
+	
+	public static void insertPostsWithComments(List<WallPost> wpl, List<WallComment> wcl) throws SQLException{
+		synchronized(conn){
+			conn.setAutoCommit(false);
+			try {
+			    insertPosts(wpl);
+			    insertComments(wcl);
+			} catch(SQLException e) {
+			    conn.rollback();
+			    throw e;
+			} finally {
+			    conn.commit();
+			    conn.setAutoCommit(true);
+			}
+		}
 	}
 
 	public static ArrayList<WallPost> getAllPosts() throws SQLException {

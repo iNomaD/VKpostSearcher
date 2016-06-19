@@ -11,16 +11,18 @@ public class WallComment {
 	private String text;
 	private long group_id;
 	private long post_id;
+	private long reply_to_user;
 
-	public WallComment(long comment_id, long from_id, Date date, String text, long group_id, long post_id) {
+	public WallComment(long comment_id, long from_id, Date date, String text, long group_id, long post_id, long reply_to_user) {
 		this.comment_id = comment_id;
 		this.from_id = from_id;
 		this.date = date;
 		this.text = text;
 		this.group_id = group_id;
 		this.post_id = post_id;
+		this.reply_to_user=reply_to_user;
 	}
-	
+
 	public void print(){
 		SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy 'at' HH:mm:ss");
 		System.out.println(getPostUrl());
@@ -78,6 +80,14 @@ public class WallComment {
 
 	public void setPost_id(long post_id) {
 		this.post_id = post_id;
+	}
+	
+	public long getReply_to_user() {
+		return reply_to_user;
+	}
+
+	public void setReply_to_user(long reply_to_user) {
+		this.reply_to_user = reply_to_user;
 	}
 }
 

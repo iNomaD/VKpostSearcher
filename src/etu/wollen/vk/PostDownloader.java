@@ -23,7 +23,7 @@ public class PostDownloader {
 	private static final int groupThreads = 4;
 	private static final int commentThreads = 8;
 
-	public void fillGroupNames(ArrayList<String> groupShortNames) {
+	public void fillGroupNames(List<String> groupShortNames) {
 		ArrayList<Long> groupIds = new ArrayList<Long>();
 		if (!groupShortNames.isEmpty()) {
 			String request = "http://api.vk.com/method/groups.getById?group_ids=";
@@ -98,7 +98,7 @@ public class PostDownloader {
 		StringBuilder result = new StringBuilder(conn.getContentLength());
 		char[] cbuf = new char[1024];
 		int len;
-		while ((len = rd.read(cbuf)) != -1){
+		while ((len = rd.read(cbuf)) != -1) {
 			result.append(cbuf, 0, len);
 		}
 		rd.close();
@@ -137,7 +137,8 @@ public class PostDownloader {
 			while (!allRead) {
 				final List<WallPost> postsToCommit = new ArrayList<>();
 				final List<WallComment> comsToCommit = new ArrayList<>();
-				
+				final List<Like> likesToCommit = new ArrayList<>();
+
 				String request = "http://api.vk.com/method/wall.get?owner_id=" + wall_id + "&offset=" + offset
 						+ "&count=" + count + "&v=5.45";
 				offset += count;
@@ -153,7 +154,7 @@ public class PostDownloader {
 				if (items.size() == 0) {
 					allRead = true;
 				}
-				
+
 				for (Object oitem : items) {
 					JSONObject item = (JSONObject) oitem;
 
@@ -175,8 +176,8 @@ public class PostDownloader {
 							allRead = true;
 							System.out.println("All posts in " + wall_id + " were parsed");
 						}
-					} else {					
-						//stash in memory
+					} else {
+						// stash in memory
 						allWallSet.add(wp.getPost_id());
 						postsToCommit.add(wp);
 					}
@@ -184,21 +185,23 @@ public class PostDownloader {
 					// if date restriction reached
 					if (!allRead && wp.getDate().getTime() < dateRestr.getTime()) {
 						allRead = true;
-						System.out.println("Date restriction in "+wall_id);
+						System.out.println("Date restriction in " + wall_id);
 					}
 				}
-				
-				if(postsToCommit.size() > 0){
-					//downloads comments in multithreads
+
+				if (postsToCommit.size() > 0) {
+					// downloads comments and likes in multithreads
 					ExecutorService executor = Executors.newFixedThreadPool(commentThreads);
 
 					for (final WallPost wp : postsToCommit) {
-						Runnable worker = new Runnable(){
+						Runnable worker = new Runnable() {
 							@Override
 							public void run() {
 								List<WallComment> wcl = getComments(wp.getGroup_id(), wp.getPost_id());
-								synchronized(comsToCommit){
+								List<Like> lkl = getLikes(wp.getGroup_id(), wp.getPost_id(), wp.getDate());
+								synchronized (comsToCommit) {
 									comsToCommit.addAll(wcl);
+									likesToCommit.addAll(lkl);
 								}
 							}
 						};
@@ -207,11 +210,11 @@ public class PostDownloader {
 
 					executor.shutdown();
 					while (!executor.isTerminated()) {
-						Thread.sleep(100);
+						Thread.sleep(50);
 					}
-					
-					//write to db
-					DBConnector.insertPostsWithComments(postsToCommit, comsToCommit);
+
+					// write to db
+					DBConnector.insertPostsWithComments(postsToCommit, comsToCommit, likesToCommit);
 				}
 			}
 		} catch (Exception e) {
@@ -226,21 +229,21 @@ public class PostDownloader {
 		long offset = 0;
 		long commentsRead = 0;
 		String request = "";
-		String response = "";	
+		String response = "";
 
 		try {
 			boolean allRead = false;
 			final int attempts = 5;
 
-			while (!allRead) {		
-				for (int i = 0; i < attempts; ++i) {	
-					try{
-						request = "http://api.vk.com/method/wall.getComments?owner_id=" + wall_id + "&post_id=" + post_id
-								+ "&offset=" + offset + "&count=" + count + "&v=5.45";
+			while (!allRead) {
+				for (int i = 0; i < attempts; ++i) {
+					try {
+						request = "http://api.vk.com/method/wall.getComments?owner_id=" + wall_id + "&post_id="
+								+ post_id + "&offset=" + offset + "&count=" + count + "&v=5.45";
 						offset += count;
-		
+
 						response = sendGETtimeout(request, 11);
-		
+
 						JSONParser jp = new JSONParser();
 						JSONObject jsonresponse = (JSONObject) jp.parse(response);
 						JSONObject resp = (JSONObject) jsonresponse.get("response");
@@ -249,25 +252,25 @@ public class PostDownloader {
 						JSONArray items = (JSONArray) resp.get("items");
 						for (Object oitem : items) {
 							JSONObject item = (JSONObject) oitem;
-		
 							long date = (long) item.get("date");
 							long comment_id = (long) item.get("id");
 							long from_id = (long) item.get("from_id");
 							String text = (String) item.get("text");
-							//"reply_to_user" extra field not used
+							Object reply_object = item.get("reply_to_user");
+							long reply = reply_object == null ? 0 : (long) reply_object;
 							WallComment wc = new WallComment(comment_id, from_id, new Date(date * 1000), text, wall_id,
-									post_id);
+									post_id, reply);
 							comments.add(wc);
 							++commentsRead;
 						}
-						if (commentsRead >= comments_count) {
+						if (items.size() == 0 || commentsRead >= comments_count) {
 							allRead = true;
 						}
-						break; //exit cycle
-					}
-					catch(NullPointerException e){
+						break; // exit cycle
+					} catch (NullPointerException e) {
 						if (i < attempts - 1) {
-							System.out.println("Can't get comments... " + (attempts - i - 1) + " more attempts...");
+							System.out.println("Can't get comments from http://vk.com/wall" + wall_id + "_" + post_id
+									+ "... " + (attempts - i - 1) + " more attempts...");
 						} else {
 							throw e;
 						}
@@ -280,5 +283,59 @@ public class PostDownloader {
 			e.printStackTrace();
 		}
 		return comments;
+	}
+
+	public static List<Like> getLikes(long wall_id, long post_id, Date date) {
+		List<Like> likes = new ArrayList<Like>();
+		final long count = 100;
+		long offset = 0;
+		long likesRead = 0;
+		String request = "";
+		String response = "";
+
+		try {
+			boolean allRead = false;
+			final int attempts = 5;
+
+			while (!allRead) {
+				for (int i = 0; i < attempts; ++i) {
+					try {
+						request = "http://api.vk.com/method/likes.getList?type=post&owner_id=" + wall_id + "&item_id="
+								+ post_id + "&offset=" + offset + "&count=" + count + "&v=5.45";
+						offset += count;
+						response = sendGETtimeout(request, 11);
+
+						JSONParser jp = new JSONParser();
+						JSONObject jsonresponse = (JSONObject) jp.parse(response);
+						JSONObject resp = (JSONObject) jsonresponse.get("response");
+						Object likes_count_object = resp.get("count");
+						long likes_count = likes_count_object == null ? 0 : (long) likes_count_object;
+						JSONArray items = (JSONArray) resp.get("items");
+						for (Object oitem : items) {
+							long user = (long) oitem;
+							Like like = new Like(user, "post", wall_id, post_id, date);
+							likes.add(like);
+							++likesRead;
+						}
+						if (items.size() == 0 || likesRead >= likes_count) {
+							allRead = true;
+						}
+						break; // exit cycle
+					} catch (NullPointerException e) {
+						if (i < attempts - 1) {
+							System.out.println("Can't get likes from http://vk.com/wall" + wall_id + "_" + post_id
+									+ "... " + (attempts - i - 1) + " more attempts...");
+						} else {
+							throw e;
+						}
+					}
+				}
+			}
+
+		} catch (Exception e) {
+			System.out.println(request + " => " + response);
+			e.printStackTrace();
+		}
+		return likes;
 	}
 }

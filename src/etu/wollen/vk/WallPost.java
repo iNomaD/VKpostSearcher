@@ -27,7 +27,7 @@ public class WallPost{
 	}
 	
 	public String getPostUrl(){
-		return "http://vk.com/wall"+group_id+"_"+post_id;
+		return "http://vk.com/wall" + group_id + "_" + post_id;
 	}
 
 	public long getPost_id() {

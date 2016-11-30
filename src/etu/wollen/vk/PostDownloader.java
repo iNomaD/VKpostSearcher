@@ -26,7 +26,7 @@ public class PostDownloader {
 	public void fillGroupNames(List<String> groupShortNames) {
 		ArrayList<Long> groupIds = new ArrayList<Long>();
 		if (!groupShortNames.isEmpty()) {
-			String request = "http://api.vk.com/method/groups.getById?group_ids=";
+			String request = "https://api.vk.com/method/groups.getById?group_ids=";
 			for (String gr : groupShortNames) {
 				request += gr + ",";
 			}
@@ -139,7 +139,7 @@ public class PostDownloader {
 				final List<WallComment> comsToCommit = new ArrayList<>();
 				final List<Like> likesToCommit = new ArrayList<>();
 
-				String request = "http://api.vk.com/method/wall.get?owner_id=" + wall_id + "&offset=" + offset
+				String request = "https://api.vk.com/method/wall.get?owner_id=" + wall_id + "&offset=" + offset
 						+ "&count=" + count + "&v=5.45";
 				offset += count;
 
@@ -238,7 +238,7 @@ public class PostDownloader {
 			while (!allRead) {
 				for (int i = 0; i < attempts; ++i) {
 					try {
-						request = "http://api.vk.com/method/wall.getComments?owner_id=" + wall_id + "&post_id="
+						request = "https://api.vk.com/method/wall.getComments?owner_id=" + wall_id + "&post_id="
 								+ post_id + "&offset=" + offset + "&count=" + count + "&v=5.45";
 						offset += count;
 
@@ -300,7 +300,7 @@ public class PostDownloader {
 			while (!allRead) {
 				for (int i = 0; i < attempts; ++i) {
 					try {
-						request = "http://api.vk.com/method/likes.getList?type=post&owner_id=" + wall_id + "&item_id="
+						request = "https://api.vk.com/method/likes.getList?type=post&owner_id=" + wall_id + "&item_id="
 								+ post_id + "&offset=" + offset + "&count=" + count + "&v=5.45";
 						offset += count;
 						response = sendGETtimeout(request, 11);

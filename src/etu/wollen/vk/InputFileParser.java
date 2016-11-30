@@ -55,7 +55,7 @@ public class InputFileParser {
 	}
 	
 	private long getIdFromStr(String id_str){
-		String request = "http://api.vk.com/method/users.get?user_ids="+id_str+"&v=5.52";
+		String request = "https://api.vk.com/method/users.get?user_ids="+id_str+"&v=5.52";
 		try {
 			String response = PostDownloader.sendGETtimeout(request, 11);
 			JSONParser jp = new JSONParser();

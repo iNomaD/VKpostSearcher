@@ -19,4 +19,4 @@
 5. Запустить `start -skip.bat`: начнётся сразу поиск по готовой базе без парсинга.
 
 # Прочее
-Утилита [vk-post-inspector](https://github.com/iNomaD/vk-post-inspector) сканировать определённую запись в группе.
+Утилита [vk-post-inspector](https://github.com/iNomaD/vk-post-inspector) позволяет сканировать определённую запись в группе.

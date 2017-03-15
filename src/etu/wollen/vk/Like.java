@@ -3,6 +3,8 @@ package etu.wollen.vk;
 import java.text.SimpleDateFormat;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
 
 public class Like {
 	private long user;
@@ -59,6 +61,16 @@ public class Like {
 	}
 	public void setDate(Date date) {
 		this.date = date;
+	}
+	
+	public static List<Like> getByGroupId(List<Like> items, long groupId){
+		List<Like> result = new LinkedList<>();
+		for(Like item : items){
+			if(item.getOwner_id() == groupId){
+				result.add(item);
+			}
+		}
+		return result;
 	}
 }
 

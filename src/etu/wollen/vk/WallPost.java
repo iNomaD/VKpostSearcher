@@ -3,6 +3,8 @@ package etu.wollen.vk;
 import java.text.SimpleDateFormat;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
 
 public class WallPost{
 	private long post_id;
@@ -68,6 +70,16 @@ public class WallPost{
 
 	public void setText(String text) {
 		this.text = text;
+	}
+	
+	public static List<WallPost> getByGroupId(List<WallPost> items, long groupId){
+		List<WallPost> result = new LinkedList<>();
+		for(WallPost item : items){
+			if(item.getGroup_id() == groupId){
+				result.add(item);
+			}
+		}
+		return result;
 	}
 }
 

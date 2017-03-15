@@ -3,6 +3,8 @@ package etu.wollen.vk;
 import java.text.SimpleDateFormat;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
 
 public class WallComment {
 	private long comment_id;
@@ -88,6 +90,16 @@ public class WallComment {
 
 	public void setReply_to_user(long reply_to_user) {
 		this.reply_to_user = reply_to_user;
+	}
+	
+	public static List<WallComment> getByGroupId(List<WallComment> items, long groupId){
+		List<WallComment> result = new LinkedList<>();
+		for(WallComment item : items){
+			if(item.getGroup_id() == groupId){
+				result.add(item);
+			}
+		}
+		return result;
 	}
 }
 

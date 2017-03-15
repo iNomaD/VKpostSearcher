@@ -48,9 +48,9 @@ public class PostDownloader {
 			}
 		}
 	}
-
-	public Set<Long> getGroupSet() {
-		return groupNames.keySet();
+	
+	public Map<Long, String> getGroupNames(){
+		return groupNames;
 	}
 
 	public void parseGroups(final Date dateRestr) {
@@ -70,6 +70,7 @@ public class PostDownloader {
 				System.out.println("Parsing vk.com/club" + wall_id + " (" + wall_name + ")    " + count + " of "
 						+ groupNames.size());
 				getPosts(wall_id * (-1), dateRestr);
+				System.gc();
 			}
 
 		}
@@ -174,7 +175,7 @@ public class PostDownloader {
 					if (allWallSet.contains(post_id)) {
 						if (!allRead && allWallSet.size() >= posts_count) {
 							allRead = true;
-							System.out.println("All posts in " + wall_id + " were parsed");
+							System.out.println("All posts in " + wall_id + " have been parsed");
 						}
 					} else {
 						// stash in memory
@@ -219,7 +220,7 @@ public class PostDownloader {
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-			System.out.println("Wall " + wall_id + " was not parsed");
+			System.out.println("ERROR: Wall " + wall_id + " was not parsed");
 		}
 	}
 

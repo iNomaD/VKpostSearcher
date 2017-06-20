@@ -7,7 +7,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -134,11 +133,7 @@ public class PostDownloader {
 		long offset = 0;
 
 		try {
-			List<WallPost> wallPosts = DBConnector.getPostsFromWall(wall_id);
-			Set<Long> allWallSet = new HashSet<Long>();
-			for (WallPost wp : wallPosts) {
-				allWallSet.add(wp.getPost_id());
-			}
+			Set<Long> allWallSet = DBConnector.getPostsFromWallIdSet(wall_id);
 
 			boolean allRead = false;
 			while (!allRead) {

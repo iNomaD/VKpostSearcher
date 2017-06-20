@@ -169,7 +169,7 @@ public class PostSearcher {
 
 	public static List<WallPost> findPostsBySigner(long signer_id, Set<Long> set, Date dateRestr) throws SQLException {
 		List<WallPost> res = new ArrayList<WallPost>();
-		List<WallPost> wp = DBConnector.getPostsBySinger(signer_id);
+		List<WallPost> wp = DBConnector.getPostsBySigner(signer_id);
 		for (WallPost w : wp) {
 			if (set.contains(w.getGroup_id() * (-1)) && w.getDate().getTime() >= dateRestr.getTime()) {
 				res.add(w);

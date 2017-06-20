@@ -8,7 +8,9 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class DBConnector {
 	private static Connection conn = null;
@@ -19,6 +21,8 @@ public class DBConnector {
 	public static final String POST_SIGNER_ID_NAME = "POST_SIGNER_ID";
 	public static final String POST_DATE_NAME = "POST_DATE";
 	public static final String POST_TEXT_NAME = "POST_TEXT";
+	public static final String POST_GROUP_INDEX = "GROUP_INDEX";
+	public static final String POST_SIGNER_ID_INDEX = "POST_SIGNER_ID_INDEX";
 
 	public static final String COMMENTS_TABLE_NAME = "COMMENTS";
 	public static final String COMMENT_ID_NAME = "COMMENT_ID";
@@ -28,6 +32,8 @@ public class DBConnector {
 	public static final String COMMENT_GROUP_ID_NAME = "COMMENT_GROUP_ID";
 	public static final String COMMENT_POST_ID_NAME = "COMMENT_POST_ID";
 	public static final String COMMENT_REPLY_NAME = "COMMENT_REPLY";
+	public static final String COMMENT_FROM_ID_INDEX = "COMMENT_FROM_ID_INDEX";
+	public static final String COMMENT_REPLY_INDEX = "COMMENT_REPLY_INDEX";
 	
 	public static final String LIKES_TABLE_NAME = "LIKES";
 	public static final String LIKES_USER_NAME = "LIKES_USER";
@@ -35,6 +41,7 @@ public class DBConnector {
 	public static final String LIKES_OWNER_NAME = "LIKES_OWNER";
 	public static final String LIKES_ITEM_NAME = "LIKES_ITEM";
 	public static final String LIKES_DATE_NAME = "LIKES_DATE";
+	public static final String LIKES_USER_INDEX = "LIKES_USER_INDEX";
 
 	public static void connect() throws ClassNotFoundException, SQLException {
 		Class.forName("org.sqlite.JDBC");
@@ -71,6 +78,11 @@ public class DBConnector {
 				+ LIKES_USER_NAME + " INTEGER , " + LIKES_TYPE_NAME + " TEXT, " + LIKES_OWNER_NAME + " INTEGER, "
 				+ LIKES_ITEM_NAME + " INTEGER, " + LIKES_DATE_NAME + " INTEGER);");
 
+		stat.execute("CREATE INDEX IF NOT EXISTS " + POST_GROUP_INDEX + " ON " + POSTS_TABLE_NAME + " (" + POST_GROUP_NAME + ");");
+		stat.execute("CREATE INDEX IF NOT EXISTS " + POST_SIGNER_ID_INDEX + " ON " + POSTS_TABLE_NAME + " (" + POST_SIGNER_ID_NAME + ");");
+		stat.execute("CREATE INDEX IF NOT EXISTS " + COMMENT_FROM_ID_INDEX + " ON " + COMMENTS_TABLE_NAME + " (" + COMMENT_FROM_ID_NAME + ");");
+		stat.execute("CREATE INDEX IF NOT EXISTS " + COMMENT_REPLY_INDEX + " ON " + COMMENTS_TABLE_NAME + " (" + COMMENT_REPLY_NAME + ");");
+		stat.execute("CREATE INDEX IF NOT EXISTS " + LIKES_USER_INDEX + " ON " + LIKES_TABLE_NAME + " (" + LIKES_USER_NAME + ");");
 	}
 
 	public static void insertPost(WallPost wp) throws SQLException {
@@ -208,8 +220,20 @@ public class DBConnector {
 		}
 		return posts;
 	}
+	
+	public static Set<Long> getPostsFromWallIdSet(long wall_id) throws SQLException {
+		Set<Long> posts = new HashSet<Long>();
+		Statement stat = conn.createStatement();
+		ResultSet resSet = stat
+				.executeQuery("SELECT "+POST_ID_NAME+" FROM " + POSTS_TABLE_NAME + " WHERE " + POST_GROUP_NAME + " = " + wall_id);
+		while (resSet.next()) {
+			long post_id = resSet.getLong(POST_ID_NAME);
+			posts.add(post_id);
+		}
+		return posts;
+	}
 
-	public static List<WallPost> getPostsBySinger(long signer_id) throws SQLException {
+	public static List<WallPost> getPostsBySigner(long signer_id) throws SQLException {
 		List<WallPost> posts = new ArrayList<WallPost>();
 		Statement stat = conn.createStatement();
 		ResultSet resSet = stat.executeQuery(

@@ -26,10 +26,14 @@ public class PostSearcher {
 				return;
 			}
 			List<String> grList = ifp.getGrList();
+			
+			/// TODO extract properties to conf.properties file
 			long find_id = ifp.getFind_id();
 			String find_pattern = ifp.getFind_pattern();
 			boolean byId = ifp.isById();
 			Date dateRestr = ifp.getDateRestr();
+			String access_token = ifp.getAcessToken();
+			
 			if (byId) {
 				System.out.println("ID to find: " + find_id);
 			} else {
@@ -39,7 +43,7 @@ public class PostSearcher {
 			System.out.println("Parsing " + grList.size() + " groups: " + grList);
 
 			// get set of group id's using list of short names
-			PostDownloader pd = new PostDownloader();
+			PostDownloader pd = new PostDownloader(access_token);
 			pd.fillGroupNames(grList);
 
 			// if started with -skip then skip parsing group, just search

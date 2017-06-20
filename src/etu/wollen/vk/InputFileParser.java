@@ -17,6 +17,7 @@ public class InputFileParser {
 	private boolean byId = true;
 	private ArrayList<String> grList;
 	private Date dateRestr = new Date();
+	private String access_token = "";
 	
 	public boolean parseFileGroups(String filename) throws IOException {
 		grList = new ArrayList<String>();
@@ -36,6 +37,8 @@ public class InputFileParser {
 			Calendar cal = Calendar.getInstance();
 			cal.set(Integer.parseInt(pts[2]), Integer.parseInt(pts[1]) - 1, Integer.parseInt(pts[0]));
 			dateRestr = cal.getTime();
+			
+			access_token = br.readLine();
 
 			String line = null;
 			while ((line = br.readLine()) != null) {
@@ -110,5 +113,9 @@ public class InputFileParser {
 
 	public void setById(boolean byId) {
 		this.byId = byId;
+	}
+	
+	public String getAcessToken(){
+		return access_token;
 	}
 }

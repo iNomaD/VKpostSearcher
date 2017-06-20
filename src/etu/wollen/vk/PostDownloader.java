@@ -19,9 +19,14 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
 public class PostDownloader {
+	private String access_token = "";
 	private Map<Long, String> groupNames = new HashMap<Long, String>();
 	private static final int groupThreads = 4;
 	private static final int commentThreads = 8;
+	
+	public PostDownloader(String access_token){
+		this.access_token = access_token;
+	}
 
 	public void fillGroupNames(List<String> groupShortNames) {
 		ArrayList<Long> groupIds = new ArrayList<Long>();
@@ -30,6 +35,7 @@ public class PostDownloader {
 			for (String gr : groupShortNames) {
 				request += gr + ",";
 			}
+			request += "&access_token="+access_token;
 			try {
 				String response = sendGETtimeout(request, 11);
 
@@ -69,7 +75,7 @@ public class PostDownloader {
 			public void run() {
 				System.out.println("Parsing vk.com/club" + wall_id + " (" + wall_name + ")    " + count + " of "
 						+ groupNames.size());
-				getPosts(wall_id * (-1), dateRestr);
+				getPosts(wall_id * (-1), dateRestr, access_token);
 				System.gc();
 			}
 
@@ -123,7 +129,7 @@ public class PostDownloader {
 		return response;
 	}
 
-	public static void getPosts(long wall_id, Date dateRestr) {
+	public static void getPosts(long wall_id, Date dateRestr, final String access_token) {
 		final long count = 100;
 		long offset = 0;
 
@@ -140,8 +146,9 @@ public class PostDownloader {
 				final List<WallComment> comsToCommit = new ArrayList<>();
 				final List<Like> likesToCommit = new ArrayList<>();
 
+				/// TODO check timeouts
 				String request = "https://api.vk.com/method/wall.get?owner_id=" + wall_id + "&offset=" + offset
-						+ "&count=" + count + "&v=5.45";
+						+ "&count=" + count + "&v=5.45&access_token="+access_token;
 				offset += count;
 
 				String response = sendGETtimeout(request, 11);
@@ -198,8 +205,8 @@ public class PostDownloader {
 						Runnable worker = new Runnable() {
 							@Override
 							public void run() {
-								List<WallComment> wcl = getComments(wp.getGroup_id(), wp.getPost_id());
-								List<Like> lkl = getLikes(wp.getGroup_id(), wp.getPost_id(), wp.getDate());
+								List<WallComment> wcl = getComments(wp.getGroup_id(), wp.getPost_id(), access_token);
+								List<Like> lkl = getLikes(wp.getGroup_id(), wp.getPost_id(), wp.getDate(), access_token);
 								synchronized (comsToCommit) {
 									comsToCommit.addAll(wcl);
 									likesToCommit.addAll(lkl);
@@ -224,7 +231,7 @@ public class PostDownloader {
 		}
 	}
 
-	public static List<WallComment> getComments(long wall_id, long post_id) {
+	public static List<WallComment> getComments(long wall_id, long post_id, String access_token) {
 		List<WallComment> comments = new ArrayList<WallComment>();
 		final long count = 100;
 		long offset = 0;
@@ -239,6 +246,7 @@ public class PostDownloader {
 			while (!allRead) {
 				for (int i = 0; i < attempts; ++i) {
 					try {
+						/// TODO access_token with timeouts
 						request = "https://api.vk.com/method/wall.getComments?owner_id=" + wall_id + "&post_id="
 								+ post_id + "&offset=" + offset + "&count=" + count + "&v=5.45";
 						offset += count;
@@ -286,7 +294,7 @@ public class PostDownloader {
 		return comments;
 	}
 
-	public static List<Like> getLikes(long wall_id, long post_id, Date date) {
+	public static List<Like> getLikes(long wall_id, long post_id, Date date, String access_token) {
 		List<Like> likes = new ArrayList<Like>();
 		final long count = 100;
 		long offset = 0;
@@ -301,8 +309,9 @@ public class PostDownloader {
 			while (!allRead) {
 				for (int i = 0; i < attempts; ++i) {
 					try {
+						/// TODO access_token with timeouts
 						request = "https://api.vk.com/method/likes.getList?type=post&owner_id=" + wall_id + "&item_id="
-								+ post_id + "&offset=" + offset + "&count=" + count + "&v=5.45";
+								+ post_id + "&offset=" + offset + "&count=" + count + "&v=5.4";
 						offset += count;
 						response = sendGETtimeout(request, 11);
 

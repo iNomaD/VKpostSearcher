@@ -11,6 +11,9 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
+
+import org.sqlite.Function;
 
 public class DBConnector {
 	private static Connection conn = null;
@@ -46,6 +49,21 @@ public class DBConnector {
 	public static void connect() throws ClassNotFoundException, SQLException {
 		Class.forName("org.sqlite.JDBC");
 		conn = getConnection();
+		
+        // Create regexp() function to make the REGEXP operator available
+        Function.create(conn, "REGEXP", new Function() {
+            @Override
+            protected void xFunc() throws SQLException {
+                String expression = value_text(0);
+                String value = value_text(1);
+                if (value == null)
+                    value = "";
+
+                Pattern pattern=Pattern.compile(expression, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+                result(pattern.matcher(value).find() ? 1 : 0);
+            }
+        });
+        
 		System.out.println("DB connected!");
 	}
 
@@ -204,6 +222,21 @@ public class DBConnector {
 		}
 		return posts;
 	}
+	
+	public static List<WallPost> getPostsByPattern(String regex) throws SQLException {
+		List<WallPost> posts = new ArrayList<WallPost>();
+		Statement stat = conn.createStatement();
+		ResultSet resSet = stat.executeQuery("SELECT * FROM "+POSTS_TABLE_NAME+" WHERE "+POST_TEXT_NAME+" REGEXP '"+regex+"'");
+		while (resSet.next()) {
+			long post_id = resSet.getLong(POST_ID_NAME);
+			long group_id = resSet.getLong(POST_GROUP_NAME);
+			long signer_id = resSet.getLong(POST_SIGNER_ID_NAME);
+			long date = resSet.getLong(POST_DATE_NAME);
+			String text = resSet.getString(POST_TEXT_NAME);
+			posts.add(new WallPost(post_id, group_id, signer_id, new Date(date), text));
+		}
+		return posts;
+	}
 
 	public static List<WallPost> getPostsFromWall(long wall_id) throws SQLException {
 		List<WallPost> posts = new ArrayList<WallPost>();
@@ -252,6 +285,24 @@ public class DBConnector {
 		List<WallComment> posts = new ArrayList<WallComment>();
 		Statement stat = conn.createStatement();
 		ResultSet resSet = stat.executeQuery("SELECT * FROM " + COMMENTS_TABLE_NAME);
+		while (resSet.next()) {
+
+			long comment_id = resSet.getLong(COMMENT_ID_NAME);
+			long from_id = resSet.getLong(COMMENT_FROM_ID_NAME);
+			long date = resSet.getLong(COMMENT_DATE_NAME);
+			String text = resSet.getString(COMMENT_TEXT_NAME);
+			long group_id = resSet.getLong(COMMENT_GROUP_ID_NAME);
+			long post_id = resSet.getLong(COMMENT_POST_ID_NAME);
+			long reply = resSet.getLong(COMMENT_REPLY_NAME);
+			posts.add(new WallComment(comment_id, from_id, new Date(date), text, group_id, post_id, reply));
+		}
+		return posts;
+	}
+	
+	public static List<WallComment> getCommentsByPattern(String regex) throws SQLException {
+		List<WallComment> posts = new ArrayList<WallComment>();
+		Statement stat = conn.createStatement();
+		ResultSet resSet = stat.executeQuery("SELECT * FROM "+COMMENTS_TABLE_NAME+" WHERE "+COMMENT_TEXT_NAME+" REGEXP '"+regex+"'");
 		while (resSet.next()) {
 
 			long comment_id = resSet.getLong(COMMENT_ID_NAME);

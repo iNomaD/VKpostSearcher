@@ -10,7 +10,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 public class PostSearcher {
 
@@ -228,13 +227,10 @@ public class PostSearcher {
 
 	public static List<WallPost> findPostsByPattern(String regex, Set<Long> set, Date dateRestr) throws SQLException {
 		List<WallPost> res = new ArrayList<WallPost>();
-		List<WallPost> wp = DBConnector.getAllPosts();
-		Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+		List<WallPost> wp = DBConnector.getPostsByPattern(regex);
 		for (WallPost w : wp) {
 			if (set.contains(w.getGroup_id() * (-1)) && w.getDate().getTime() >= dateRestr.getTime()) {
-				if (pattern.matcher(w.getText()).find()) {
-					res.add(w);
-				}
+				res.add(w);
 			}
 		}
 		return res;
@@ -243,13 +239,10 @@ public class PostSearcher {
 	public static List<WallComment> findCommentsByPattern(String regex, Set<Long> set, Date dateRestr)
 			throws SQLException {
 		List<WallComment> res = new ArrayList<WallComment>();
-		List<WallComment> wc = DBConnector.getAllComments();
-		Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+		List<WallComment> wc = DBConnector.getCommentsByPattern(regex);
 		for (WallComment w : wc) {
 			if (set.contains(w.getGroup_id() * (-1)) && w.getDate().getTime() >= dateRestr.getTime()) {
-				if (pattern.matcher(w.getText()).find()) {
-					res.add(w);
-				}
+				res.add(w);
 			}
 		}
 		return res;

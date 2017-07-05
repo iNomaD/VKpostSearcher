@@ -74,7 +74,7 @@ public class PostDownloader {
 			public void run() {
 				System.out.println("Parsing vk.com/club" + wall_id + " (" + wall_name + ")    " + count + " of "
 						+ groupNames.size());
-				getPosts(wall_id * (-1), dateRestr, access_token);
+				getPosts(wall_id * (-1), wall_name, dateRestr, access_token);
 				System.gc();
 			}
 
@@ -128,7 +128,7 @@ public class PostDownloader {
 		return response;
 	}
 
-	public static void getPosts(long wall_id, Date dateRestr, final String access_token) {
+	public static void getPosts(long wall_id, String wall_name, Date dateRestr, final String access_token) {
 		final long count = 100;
 		long offset = 0;
 
@@ -151,7 +151,14 @@ public class PostDownloader {
 				JSONParser jp = new JSONParser();
 				JSONObject jsonresponse = (JSONObject) jp.parse(response);
 				JSONObject resp = (JSONObject) jsonresponse.get("response");
-				Object posts_count_object = resp.get("count");
+				Object posts_count_object;
+				try{
+					posts_count_object = resp.get("count");
+				}
+				catch(NullPointerException e){
+					System.out.println("ERROR: Trying to pase closed group! " + wall_id + " ("+wall_name+")");
+					throw e;
+				}
 				long posts_count = posts_count_object == null ? 0 : (long) posts_count_object;
 				JSONArray items = (JSONArray) resp.get("items");
 				if (items.size() == 0) {
@@ -177,7 +184,7 @@ public class PostDownloader {
 					if (allWallSet.contains(post_id)) {
 						if (!allRead && allWallSet.size() >= posts_count) {
 							allRead = true;
-							System.out.println("All posts in " + wall_id + " have been parsed");
+							System.out.println("All posts in " + wall_id + " ("+wall_name+") have been parsed");
 						}
 					} else {
 						// stash in memory
@@ -222,7 +229,7 @@ public class PostDownloader {
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-			System.out.println("ERROR: Wall " + wall_id + " was not parsed");
+			System.out.println("ERROR: Wall " + wall_id + " ("+wall_name+") was not parsed");
 		}
 	}
 

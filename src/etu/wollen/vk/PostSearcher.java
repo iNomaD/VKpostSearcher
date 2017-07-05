@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -72,11 +73,22 @@ public class PostSearcher {
 			else {
 				posts = findPostsByPattern(find_pattern, groupNames.keySet(), dateRestr);
 				comments = findCommentsByPattern(find_pattern, groupNames.keySet(), dateRestr);
+				answers = new ArrayList<WallComment>();
+				likes = new ArrayList<Like>();
 			}
+			
+			// sort
 			posts.sort(new WPcomparator());
 			comments.sort(new WCcomparator());
 			answers.sort(new WCcomparator());
 			likes.sort(new Lcomparator());
+			
+			
+			// new ones first
+			Collections.reverse(posts);
+			Collections.reverse(comments);
+			Collections.reverse(answers);
+			Collections.reverse(likes);
 			
 			// output to file
 			System.out.println("Saving results...");

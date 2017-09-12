@@ -11,8 +11,8 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
-public class InputFileParser {
-	private long find_id = -1;
+public class InputFileConfig {
+	private User find_user = null;
 	private String find_pattern = "";
 	private boolean byId = true;
 	private ArrayList<String> grList;
@@ -26,8 +26,8 @@ public class InputFileParser {
 		try {
 			br = new BufferedReader(new FileReader(filename));
 			String id_str = br.readLine();
-			find_id = getIdFromStr(id_str);
-			if(find_id == -1){
+			find_user = getUserFromStr(id_str);
+			if(find_user == null){
 				byId = false;
 				find_pattern = id_str;
 			}
@@ -57,7 +57,7 @@ public class InputFileParser {
 		return false;
 	}
 	
-	private long getIdFromStr(String id_str){
+	private User getUserFromStr(String id_str){
 		String request = "https://api.vk.com/method/users.get?user_ids="+id_str+"&v=5.52";
 		try {
 			String response = PostDownloader.sendGETtimeout(request, 11);
@@ -67,52 +67,34 @@ public class InputFileParser {
 			if(resp != null){
 				JSONObject user = (JSONObject)resp.get(0);
 				long id = (long) user.get("id");
-				return id;
+				String first = (String) user.get("first_name");
+				String last = (String) user.get("last_name");
+				return new User(id, first, last);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		return -1;
+		return null;
 	}
 	
-	public long getFind_id() {
-		return find_id;
-	}
-
-	public void setFind_id(long find_id) {
-		this.find_id = find_id;
+	public User getFind_id() {
+		return find_user;
 	}
 
 	public String getFind_pattern() {
 		return find_pattern;
 	}
 
-	public void setFind_pattern(String find_pattern) {
-		this.find_pattern = find_pattern;
-	}
-
 	public Date getDateRestr() {
 		return dateRestr;
-	}
-
-	public void setDateRestr(Date dateRestr) {
-		this.dateRestr = dateRestr;
 	}
 	
 	public ArrayList<String> getGrList() {
 		return grList;
 	}
-
-	public void setGrList(ArrayList<String> grList) {
-		this.grList = grList;
-	}
 	
 	public boolean isById() {
 		return byId;
-	}
-
-	public void setById(boolean byId) {
-		this.byId = byId;
 	}
 	
 	public String getAcessToken(){

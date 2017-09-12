@@ -21,21 +21,24 @@ public class PostSearcher {
 			DBConnector.createDB();
 
 			// gather groups to search from file
-			InputFileParser ifp = new InputFileParser();
+			InputFileConfig ifp = new InputFileConfig();
 			if (!ifp.parseFileGroups("gr_list.txt")) {
 				return;
 			}
 			List<String> grList = ifp.getGrList();
 			
 			/// TODO extract properties to conf.properties file
-			long find_id = ifp.getFind_id();
+			
+			User find_user = ifp.getFind_id();
+			long find_id = -1;
 			String find_pattern = ifp.getFind_pattern();
 			boolean byId = ifp.isById();
 			Date dateRestr = ifp.getDateRestr();
 			String access_token = ifp.getAcessToken();
 			
 			if (byId) {
-				System.out.println("ID to find: " + find_id);
+				find_id = find_user.getId();
+				System.out.println("ID to find: " + find_id + " ("+find_user.getFirstName()+" "+find_user.getLastName()+")");
 			} else {
 				System.out.println("Pattern to find: " + find_pattern);
 			}
@@ -93,8 +96,8 @@ public class PostSearcher {
 			System.out.println("Saving results...");
 			String outname1 = "output_by_date.txt";
 			String outname2 = "output_by_group.txt";
-			printToFile(outname1, find_id, false, groupNames, posts, comments, answers, likes);
-			printToFile(outname2, find_id, true, groupNames, posts, comments, answers, likes);
+			printToFile(outname1, find_user, find_pattern, false, groupNames, posts, comments, answers, likes);
+			printToFile(outname2, find_user, find_pattern, true, groupNames, posts, comments, answers, likes);
 			System.out.println("Program finished!");
 
 		} catch (Exception e) {
@@ -102,13 +105,18 @@ public class PostSearcher {
 		}
 	}
 	
-	private static void printToFile(String output, long id, boolean cluster, Map<Long, String> groupNames, List<WallPost> posts, List<WallComment> comments, List<WallComment> answers, List<Like> likes){
+	private static void printToFile(String output, User user, String pattern, boolean cluster, Map<Long, String> groupNames, List<WallPost> posts, List<WallComment> comments, List<WallComment> answers, List<Like> likes){
 		PrintStream standard = System.out;
 		PrintStream st;
 		try {
 			st = new PrintStream(new FileOutputStream(output));
 			System.setOut(st);
-			System.out.println("ID: "+id + System.lineSeparator());
+			if(user != null){
+				System.out.println("ID: "+user.getId()+" ("+user.getFirstName()+" "+user.getLastName()+")"+System.lineSeparator());
+			}
+			else{
+				System.out.println("Pattern: [" + pattern + "]"+ System.lineSeparator());
+			}
 			
 			if(cluster){
 				System.out.println(posts.size() + " posts found!" + System.lineSeparator());

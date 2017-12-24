@@ -1,10 +1,5 @@
 package etu.wollen.vk;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -13,13 +8,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -44,7 +32,7 @@ public class PostDownloader {
 			}
 			request += "&access_token="+access_token;
 			try {
-				String response = sendGETtimeout(request, 11);
+				String response = HttpClient.sendGETtimeout(request, 11);
 
 				JSONParser jp = new JSONParser();
 				JSONObject jsonresponse = (JSONObject) jp.parse(response);
@@ -102,67 +90,6 @@ public class PostDownloader {
 		while (!executor.isTerminated()) {
 		}
 	}
-	
-	// workaround for certificates (not for production!)
-    private static class TrustAnyTrustManager implements X509TrustManager { 
-    	  
-        public void checkClientTrusted(X509Certificate[] chain, String authType) 
-                throws CertificateException { 
-        } 
-  
-        public void checkServerTrusted(X509Certificate[] chain, String authType) 
-                throws CertificateException { 
-        } 
-  
-        public X509Certificate[] getAcceptedIssuers() { 
-            return new X509Certificate[] {}; 
-        } 
-    }
-    
-    private static class TrustAnyHostnameVerifier implements HostnameVerifier { 
-        public boolean verify(String hostname, SSLSession session) { 
-            return true; 
-        } 
-    } 
-
-	// send GET and return response in UTF-8
-	private static String sendGET(String urlToRead) throws Exception {
-        SSLContext sc = SSLContext.getInstance("SSL"); 
-        sc.init(null, new TrustManager[] { new TrustAnyTrustManager() }, 
-                new java.security.SecureRandom()); 
-        
-		URL url = new URL(urlToRead);
-		HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
-		conn.setSSLSocketFactory(sc.getSocketFactory()); 
-		conn.setHostnameVerifier(new TrustAnyHostnameVerifier()); 
-		conn.setRequestMethod("GET");
-		BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-		StringBuilder result = new StringBuilder(conn.getContentLength());
-		char[] cbuf = new char[1024];
-		int len;
-		while ((len = rd.read(cbuf)) != -1) {
-			result.append(cbuf, 0, len);
-		}
-		rd.close();
-		return result.toString();
-	}
-
-	public static String sendGETtimeout(String request, int attempts) throws Exception {
-		String response = "";
-		for (int i = 0; i < attempts; ++i) {
-			try {
-				response = sendGET(request);
-				break; // exit cycle
-			} catch (Exception e) {
-				if (i < attempts - 1) {
-					System.out.println("Connection timed out... " + (attempts - i - 1) + " more attempts...");
-				} else {
-					throw e;
-				}
-			}
-		}
-		return response;
-	}
 
 	public static void getPosts(long wall_id, String wall_name, Date dateRestr, final String access_token) {
 		final long count = 100;
@@ -182,7 +109,7 @@ public class PostDownloader {
 						+ "&count=" + count + "&v=5.45&access_token="+access_token;
 				offset += count;
 
-				String response = sendGETtimeout(request, 11);
+				String response = HttpClient.sendGETtimeout(request, 11);
 
 				JSONParser jp = new JSONParser();
 				JSONObject jsonresponse = (JSONObject) jp.parse(response);
@@ -291,7 +218,7 @@ public class PostDownloader {
 								+ post_id + "&offset=" + offset + "&count=" + count + "&v=5.45";
 						offset += count;
 
-						response = sendGETtimeout(request, 11);
+						response = HttpClient.sendGETtimeout(request, 11);
 
 						JSONParser jp = new JSONParser();
 						JSONObject jsonresponse = (JSONObject) jp.parse(response);
@@ -353,7 +280,7 @@ public class PostDownloader {
 						request = "https://api.vk.com/method/likes.getList?type=post&owner_id=" + wall_id + "&item_id="
 								+ post_id + "&offset=" + offset + "&count=" + count + "&v=5.4";
 						offset += count;
-						response = sendGETtimeout(request, 11);
+						response = HttpClient.sendGETtimeout(request, 11);
 
 						JSONParser jp = new JSONParser();
 						JSONObject jsonresponse = (JSONObject) jp.parse(response);

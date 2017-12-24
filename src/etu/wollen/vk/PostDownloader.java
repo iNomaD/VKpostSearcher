@@ -2,8 +2,9 @@ package etu.wollen.vk;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -12,6 +13,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -94,11 +102,39 @@ public class PostDownloader {
 		while (!executor.isTerminated()) {
 		}
 	}
+	
+	// workaround for certificates (not for production!)
+    private static class TrustAnyTrustManager implements X509TrustManager { 
+    	  
+        public void checkClientTrusted(X509Certificate[] chain, String authType) 
+                throws CertificateException { 
+        } 
+  
+        public void checkServerTrusted(X509Certificate[] chain, String authType) 
+                throws CertificateException { 
+        } 
+  
+        public X509Certificate[] getAcceptedIssuers() { 
+            return new X509Certificate[] {}; 
+        } 
+    }
+    
+    private static class TrustAnyHostnameVerifier implements HostnameVerifier { 
+        public boolean verify(String hostname, SSLSession session) { 
+            return true; 
+        } 
+    } 
 
 	// send GET and return response in UTF-8
 	private static String sendGET(String urlToRead) throws Exception {
+        SSLContext sc = SSLContext.getInstance("SSL"); 
+        sc.init(null, new TrustManager[] { new TrustAnyTrustManager() }, 
+                new java.security.SecureRandom()); 
+        
 		URL url = new URL(urlToRead);
-		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+		HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
+		conn.setSSLSocketFactory(sc.getSocketFactory()); 
+		conn.setHostnameVerifier(new TrustAnyHostnameVerifier()); 
 		conn.setRequestMethod("GET");
 		BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
 		StringBuilder result = new StringBuilder(conn.getContentLength());
@@ -156,8 +192,7 @@ public class PostDownloader {
 					posts_count_object = resp.get("count");
 				}
 				catch(NullPointerException e){
-					System.out.println("ERROR: Trying to pase closed group! " + wall_id + " ("+wall_name+")");
-					throw e;
+					throw new ClosedGroupExcepton(wall_id, wall_name);
 				}
 				long posts_count = posts_count_object == null ? 0 : (long) posts_count_object;
 				JSONArray items = (JSONArray) resp.get("items");
@@ -227,7 +262,10 @@ public class PostDownloader {
 					DBConnector.insertPostsWithComments(postsToCommit, comsToCommit, likesToCommit);
 				}
 			}
-		} catch (Exception e) {
+		}catch(ClosedGroupExcepton e){
+			System.out.println("ERROR: Trying to parse closed group! " + e.getWall_id() + " ("+e.getWall_name()+")");
+		}
+		catch (Exception e) {
 			e.printStackTrace();
 			System.out.println("ERROR: Wall " + wall_id + " ("+wall_name+") was not parsed");
 		}
@@ -349,5 +387,26 @@ public class PostDownloader {
 			e.printStackTrace();
 		}
 		return likes;
+	}
+}
+
+class ClosedGroupExcepton extends Exception{
+	
+	private static final long serialVersionUID = 7145098911873968505L;
+	private long wall_id;
+	private String wall_name;
+	
+	public ClosedGroupExcepton(long wall_id, String wall_name) {
+		super();
+		this.wall_id = wall_id;
+		this.wall_name = wall_name;
+	}
+	
+	public long getWall_id() {
+		return wall_id;
+	}
+	
+	public String getWall_name() {
+		return wall_name;
 	}
 }

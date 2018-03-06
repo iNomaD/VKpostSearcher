@@ -58,7 +58,7 @@ public class InputFileConfig {
 	}
 	
 	private User getUserFromStr(String id_str){
-		String request = "https://api.vk.com/method/users.get?user_ids="+id_str+"&v=5.52";
+		String request = "https://api.vk.com/method/users.get?user_ids="+id_str+"&v="+PostDownloader.version;
 		try {
 			String response = HttpClient.sendGETtimeout(request, 11);
 			JSONParser jp = new JSONParser();

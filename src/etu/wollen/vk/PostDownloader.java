@@ -18,6 +18,7 @@ public class PostDownloader {
 	private Map<Long, String> groupNames = new HashMap<Long, String>();
 	private static final int groupThreads = 4;
 	private static final int commentThreads = 8;
+	public static final String version = "5.45";
 	
 	public PostDownloader(String access_token){
 		this.access_token = access_token;
@@ -30,7 +31,8 @@ public class PostDownloader {
 			for (String gr : groupShortNames) {
 				request += gr + ",";
 			}
-			request += "&access_token="+access_token;
+			request += "&v=" + version + "&access_token=" + access_token;
+			System.out.println(request);
 			try {
 				String response = HttpClient.sendGETtimeout(request, 11);
 
@@ -39,10 +41,18 @@ public class PostDownloader {
 				JSONArray items = (JSONArray) jsonresponse.get("response");
 				for (Object oitem : items) {
 					JSONObject item = (JSONObject) oitem;
-					long gid = (long) item.get("gid");
+					long gid = (long) item.get("id");
 					String name = (String) item.get("name");
-					groupIds.add(gid);
-					groupNames.put(gid, name);
+					long is_closed = (long) item.get("is_closed");
+					if(is_closed == 0){
+						groupIds.add(gid);
+						groupNames.put(gid, name);
+					}
+					else{
+						// TODO check whether the user is a member of the private group
+						String screen_name = (String) item.get("screen_name");
+						System.out.println("Closed group: " + screen_name);
+					}
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -106,7 +116,7 @@ public class PostDownloader {
 
 				/// TODO check timeouts
 				String request = "https://api.vk.com/method/wall.get?owner_id=" + wall_id + "&offset=" + offset
-						+ "&count=" + count + "&v=5.45&access_token="+access_token;
+						+ "&count=" + count + "&v=" + version + "&access_token=" + access_token;
 				offset += count;
 
 				String response = HttpClient.sendGETtimeout(request, 11);
@@ -215,7 +225,7 @@ public class PostDownloader {
 					try {
 						/// TODO access_token with timeouts
 						request = "https://api.vk.com/method/wall.getComments?owner_id=" + wall_id + "&post_id="
-								+ post_id + "&offset=" + offset + "&count=" + count + "&v=5.45";
+								+ post_id + "&offset=" + offset + "&count=" + count + "&v=" + version;
 						offset += count;
 
 						response = HttpClient.sendGETtimeout(request, 11);
@@ -278,7 +288,7 @@ public class PostDownloader {
 					try {
 						/// TODO access_token with timeouts
 						request = "https://api.vk.com/method/likes.getList?type=post&owner_id=" + wall_id + "&item_id="
-								+ post_id + "&offset=" + offset + "&count=" + count + "&v=5.4";
+								+ post_id + "&offset=" + offset + "&count=" + count + "&v=" + version;
 						offset += count;
 						response = HttpClient.sendGETtimeout(request, 11);
 

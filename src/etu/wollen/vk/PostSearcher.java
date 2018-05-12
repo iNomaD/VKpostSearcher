@@ -1,108 +1,125 @@
 package etu.wollen.vk;
 
+import etu.wollen.vk.api.PostDownloader;
+import etu.wollen.vk.conf.Config;
+import etu.wollen.vk.conf.ConfigParser;
+import etu.wollen.vk.database.DBConnector;
+import etu.wollen.vk.models.*;
+
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class PostSearcher {
 
 	public static void main(String[] args) {
-		try {
-			// connect and create DB
-			DBConnector.connect();
-			// DBConnector.deleteDB();
-			DBConnector.createDB();
 
-			// gather groups to search from file
-			InputFileConfig ifp = new InputFileConfig();
-			if (!ifp.parseFileGroups("gr_list.txt")) {
-				return;
-			}
-			List<String> grList = ifp.getGrList();
-			
-			/// TODO extract properties to conf.properties file
-			
-			User find_user = ifp.getFind_id();
-			long find_id = -1;
-			String find_pattern = ifp.getFind_pattern();
-			boolean byId = ifp.isById();
-			Date dateRestr = ifp.getDateRestr();
-			String access_token = ifp.getAcessToken();
-			
-			if (byId) {
-				find_id = find_user.getId();
-				System.out.println("ID to find: " + find_id + " ("+find_user.getFirstName()+" "+find_user.getLastName()+")");
-			} else {
-				System.out.println("Pattern to find: " + find_pattern);
-			}
-			System.out.println("Date restriction: " + dateRestr);
-			System.out.println("Parsing " + grList.size() + " groups: " + grList);
+	    try {
+            // connect and create DB
+            DBConnector.connect();
+            // DBConnector.deleteDB();
+            DBConnector.createDB();
+        }
+        catch (Exception e){
+	        e.printStackTrace();
+            System.out.println("Can't initialize database");
+            return;
+        }
 
-			// get set of group id's using list of short names
-			PostDownloader pd = new PostDownloader(access_token);
-			pd.fillGroupNames(grList);
+        // gather groups to search from file
+        ConfigParser configParser = new ConfigParser();
+        Config config;
+        try {
+             config = configParser.parseFileGroups("gr_list.txt");
+        }
+        catch (Exception e){
+            e.printStackTrace();
+            System.out.println("Error occured while loading the configuration");
+            return;
+        }
 
-			// if started with -skip then skip parsing group, just search
-			if (!(args.length > 0 && args[0].equals("-skip"))) {
-				pd.parseGroups(dateRestr);
-			} else {
-				System.out.println("Parsing skipped!");
-			}
+        List<String> grList = config.getGroupList();
 
-			// start searching for comments and posts, results to file
-			System.out.println("Start searching...  after date: " + dateRestr);
-			Map<Long, String> groupNames = pd.getGroupNames();
-			List<WallPost> posts = null;
-			List<WallComment> comments = null;
-			List<WallComment> answers = null;
-			List<Like> likes = null;
+        /// TODO extract properties to conf.properties file
 
-			// by signer id
-			if (byId) {
-				posts = findPostsBySigner(find_id, groupNames.keySet(), dateRestr);
-				comments = findCommentsBySigner(find_id, groupNames.keySet(), dateRestr);
-				answers = findCommentsByReply(find_id, groupNames.keySet(), dateRestr);
-				likes = findLikesByUser(find_id, groupNames.keySet(), dateRestr);
-			}
-			// by pattern
-			else {
-				posts = findPostsByPattern(find_pattern, groupNames.keySet(), dateRestr);
-				comments = findCommentsByPattern(find_pattern, groupNames.keySet(), dateRestr);
-				answers = new ArrayList<WallComment>();
-				likes = new ArrayList<Like>();
-			}
-			
-			// sort
-			posts.sort(new WPcomparator());
-			comments.sort(new WCcomparator());
-			answers.sort(new WCcomparator());
-			likes.sort(new Lcomparator());
-			
-			
-			// new ones first
-			Collections.reverse(posts);
-			Collections.reverse(comments);
-			Collections.reverse(answers);
-			Collections.reverse(likes);
-			
-			// output to file
-			System.out.println("Saving results...");
-			String outname1 = "output_by_date.txt";
-			String outname2 = "output_by_group.txt";
-			printToFile(outname1, find_user, find_pattern, false, groupNames, posts, comments, answers, likes);
-			printToFile(outname2, find_user, find_pattern, true, groupNames, posts, comments, answers, likes);
-			System.out.println("Program finished!");
+        User find_user = config.getFindUser();
+        long find_id = -1;
+        String find_pattern = config.getFindPattern();
+        boolean byId = config.isById();
+        Date dateRestr = config.getDateRestriction();
+        String access_token = config.getAccessToken();
 
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+        if (byId) {
+            find_id = find_user.getId();
+            System.out.println("ID to find: " + find_id + " ("+find_user.getFirstName()+" "+find_user.getLastName()+")");
+        } else {
+            System.out.println("Pattern to find: " + find_pattern);
+        }
+        System.out.println("Date restriction: " + dateRestr);
+        System.out.println("Parsing " + grList.size() + " groups: " + grList);
+
+        // get set of group id's using list of short names
+        PostDownloader pd = new PostDownloader(access_token);
+        pd.fillGroupNames(grList);
+
+        // if started with -skip then skip parsing group, just search
+        if (!(args.length > 0 && args[0].equals("-skip"))) {
+            pd.parseGroups(dateRestr);
+        } else {
+            System.out.println("Parsing skipped!");
+        }
+
+        // start searching for comments and posts, results to file
+        System.out.println("Start searching...  after date: " + dateRestr);
+        Map<Long, String> groupNames = pd.getGroupNames();
+        List<WallPost> posts;
+        List<WallComment> comments;
+        List<WallComment> answers;
+        List<Like> likes;
+
+        // by signer id
+        try {
+            if (byId) {
+                posts = findPostsBySigner(find_id, groupNames.keySet(), dateRestr);
+                comments = findCommentsBySigner(find_id, groupNames.keySet(), dateRestr);
+                answers = findCommentsByReply(find_id, groupNames.keySet(), dateRestr);
+                likes = findLikesByUser(find_id, groupNames.keySet(), dateRestr);
+            }
+            // by pattern
+            else {
+                posts = findPostsByPattern(find_pattern, groupNames.keySet(), dateRestr);
+                comments = findCommentsByPattern(find_pattern, groupNames.keySet(), dateRestr);
+                answers = new ArrayList<>();
+                likes = new ArrayList<>();
+            }
+        }
+        catch(Exception e){
+            e.printStackTrace();
+            return;
+        }
+
+        // sort
+        posts.sort(new DateComparator());
+        comments.sort(new DateComparator());
+        answers.sort(new DateComparator());
+        likes.sort(new DateComparator());
+
+
+        // new ones first
+        Collections.reverse(posts);
+        Collections.reverse(comments);
+        Collections.reverse(answers);
+        Collections.reverse(likes);
+
+        // output to file
+        System.out.println("Saving results...");
+        String outname1 = "output_by_date.txt";
+        String outname2 = "output_by_group.txt";
+        printToFile(outname1, find_user, find_pattern, false, groupNames, posts, comments, answers, likes);
+        printToFile(outname2, find_user, find_pattern, true, groupNames, posts, comments, answers, likes);
+        System.out.println("Program finished!");
 	}
 	
 	private static void printToFile(String output, User user, String pattern, boolean cluster, Map<Long, String> groupNames, List<WallPost> posts, List<WallComment> comments, List<WallComment> answers, List<Like> likes){
@@ -186,20 +203,20 @@ public class PostSearcher {
 		}
 	}
 
-	public static List<WallPost> findPostsBySigner(long signer_id, Set<Long> set, Date dateRestr) throws SQLException {
-		List<WallPost> res = new ArrayList<WallPost>();
+	private static List<WallPost> findPostsBySigner(long signer_id, Set<Long> set, Date dateRestr) throws SQLException {
+		List<WallPost> res = new ArrayList<>();
 		List<WallPost> wp = DBConnector.getPostsBySigner(signer_id);
 		for (WallPost w : wp) {
-			if (set.contains(w.getGroup_id() * (-1)) && w.getDate().getTime() >= dateRestr.getTime()) {
+			if (set.contains(w.getGroupId() * (-1)) && w.getDate().getTime() >= dateRestr.getTime()) {
 				res.add(w);
 			}
 		}
 		return res;
 	}
 
-	public static List<WallComment> findCommentsBySigner(long signer_id, Set<Long> set, Date dateRestr)
+	private static List<WallComment> findCommentsBySigner(long signer_id, Set<Long> set, Date dateRestr)
 			throws SQLException {
-		List<WallComment> res = new ArrayList<WallComment>();
+		List<WallComment> res = new ArrayList<>();
 		List<WallComment> wc = DBConnector.getCommentsBySigner(signer_id);
 		for (WallComment w : wc) {
 			if (set.contains(w.getGroup_id() * (-1)) && w.getDate().getTime() >= dateRestr.getTime()) {
@@ -209,9 +226,9 @@ public class PostSearcher {
 		return res;
 	}
 
-	public static List<WallComment> findCommentsByReply(long signer_id, Set<Long> set, Date dateRestr)
+	private static List<WallComment> findCommentsByReply(long signer_id, Set<Long> set, Date dateRestr)
 			throws SQLException {
-		List<WallComment> res = new ArrayList<WallComment>();
+		List<WallComment> res = new ArrayList<>();
 		List<WallComment> wc = DBConnector.getCommentsByReply(signer_id);
 		for (WallComment w : wc) {
 			if (set.contains(w.getGroup_id() * (-1)) && w.getDate().getTime() >= dateRestr.getTime()) {
@@ -221,32 +238,32 @@ public class PostSearcher {
 		return res;
 	}
 	
-	public static List<Like> findLikesByUser(long user, Set<Long> set, Date dateRestr)
+	private static List<Like> findLikesByUser(long user, Set<Long> set, Date dateRestr)
 			throws SQLException {
 		List<Like> res = new ArrayList<>();
 		List<Like> likes = DBConnector.getLikesByUser(user);
 		for (Like l : likes) {
-			if (set.contains(l.getOwner_id() * (-1)) && l.getDate().getTime() >= dateRestr.getTime()) {
+			if (set.contains(l.getOwnerId() * (-1)) && l.getDate().getTime() >= dateRestr.getTime()) {
 				res.add(l);
 			}
 		}
 		return res;
 	}
 
-	public static List<WallPost> findPostsByPattern(String regex, Set<Long> set, Date dateRestr) throws SQLException {
-		List<WallPost> res = new ArrayList<WallPost>();
+	private static List<WallPost> findPostsByPattern(String regex, Set<Long> set, Date dateRestr) throws SQLException {
+		List<WallPost> res = new ArrayList<>();
 		List<WallPost> wp = DBConnector.getPostsByPattern(regex);
 		for (WallPost w : wp) {
-			if (set.contains(w.getGroup_id() * (-1)) && w.getDate().getTime() >= dateRestr.getTime()) {
+			if (set.contains(w.getGroupId() * (-1)) && w.getDate().getTime() >= dateRestr.getTime()) {
 				res.add(w);
 			}
 		}
 		return res;
 	}
 
-	public static List<WallComment> findCommentsByPattern(String regex, Set<Long> set, Date dateRestr)
+	private static List<WallComment> findCommentsByPattern(String regex, Set<Long> set, Date dateRestr)
 			throws SQLException {
-		List<WallComment> res = new ArrayList<WallComment>();
+		List<WallComment> res = new ArrayList<>();
 		List<WallComment> wc = DBConnector.getCommentsByPattern(regex);
 		for (WallComment w : wc) {
 			if (set.contains(w.getGroup_id() * (-1)) && w.getDate().getTime() >= dateRestr.getTime()) {

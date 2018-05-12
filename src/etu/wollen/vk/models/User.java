@@ -1,12 +1,11 @@
-package etu.wollen.vk;
+package etu.wollen.vk.models;
 
 public final class User {
 	
 	private long id;
 	private String firstName;
 	private String lastName;
-	
-	
+
 	public User(long id, String firstName, String lastName) {
 		super();
 		this.id = id;

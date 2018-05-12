@@ -1,1 +1,1 @@
-java -jar searcher_jar
+java -jar VKpostSearcher_jar

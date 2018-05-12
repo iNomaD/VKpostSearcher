@@ -1,4 +1,4 @@
-package etu.wollen.vk;
+package etu.wollen.vk.transport;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -40,8 +40,8 @@ public class HttpClient {
         } 
     }
     
-    static SSLSocketFactory socketFactory;
-    static HostnameVerifier hostnameVerifier;
+    private static SSLSocketFactory socketFactory;
+    private static HostnameVerifier hostnameVerifier;
     
     static{
         SSLContext sc;

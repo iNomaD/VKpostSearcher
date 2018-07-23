@@ -1,0 +1,1 @@
+java -jar VKpostSearcher_jar -skip -friends

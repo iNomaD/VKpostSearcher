@@ -40,7 +40,6 @@ public class PostDownloader {
 				request.append(gr).append(",");
 			}
 			request.append("&v=" + version + "&access_token=").append(access_token);
-			System.out.println(request);
 			try {
 				String response = HttpClient.sendGETtimeout(request.toString(), 11);
 

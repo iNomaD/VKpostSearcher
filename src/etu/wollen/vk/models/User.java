@@ -25,4 +25,8 @@ public final class User {
 		return lastName;
 	}
 
+	@Override
+	public String toString() {
+		return id + "{"+firstName+" "+lastName+"}";
+	}
 }

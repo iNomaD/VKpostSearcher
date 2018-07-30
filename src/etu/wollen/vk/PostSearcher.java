@@ -6,6 +6,7 @@ import etu.wollen.vk.conf.Config;
 import etu.wollen.vk.conf.ConfigParser;
 import etu.wollen.vk.database.DBConnector;
 import etu.wollen.vk.models.*;
+import etu.wollen.vk.transport.HttpClient;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -27,6 +28,7 @@ public class PostSearcher {
 	public static void main(String[] args) {
 		boolean skip = getFlag(args, "-skip");
 		boolean friends = getFlag(args, "-friends");
+		boolean debug = getFlag(args, "-debug");
 
 	    try {
             // connect and create DB
@@ -41,6 +43,7 @@ public class PostSearcher {
         }
 
         // gather groups to search from file
+		HttpClient.getInstance().setDebugEnabled(debug);
         ConfigParser configParser = new ConfigParser();
         Config config;
         try {
@@ -59,12 +62,10 @@ public class PostSearcher {
             System.out.println("Pattern to find: " + config.getFindPattern());
         }
         System.out.println("Date restriction: " + config.getDateRestriction());
-		List<String> grList = config.getGroupList();
-        System.out.println("Processing " + grList.size() + " groups: " + grList);
+        System.out.println("Processing " + config.getGroupList() + " groups: " + config.getGroupList());
 
         // obtain the set of group ids using list of short names
-        PostDownloader pd = new PostDownloader(config.getAccessToken());
-        pd.fillGroupNames(grList);
+        PostDownloader pd = new PostDownloader(config.getGroupList(), config.getAccessToken());
 
         // if started with -skip then skip parsing group, just search
         if (!skip) {
@@ -85,7 +86,7 @@ public class PostSearcher {
 			try {
 				List<User> friendsList = new UserDownloader(config.getAccessToken()).getFriends(config.getFindUser());
 				System.out.println("Found " + friendsList.size() + " friends");
-				if(friendsList.size() >= 0) {
+				if(friendsList.size() > 0) {
 					findData(pd.getGroupNames(), config.getDateRestriction(),
 							true, friendsList, null, "output_friends");
 				}
@@ -145,10 +146,10 @@ public class PostSearcher {
 		User findUser = null;
         Map<Long, User> usersMap = null;
 		if(byId) {
-			if(findUsers.size() == 0){
+			if(findUsers.size() == 1){
 				findUser = findUsers.get(0);
 			}
-			else if(findUsers.size() > 0){
+			else if(findUsers.size() > 1){
                 usersMap = new HashMap<>();
                 for(User user: findUsers){
                     usersMap.putIfAbsent(user.getId(), user);

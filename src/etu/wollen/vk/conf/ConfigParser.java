@@ -19,6 +19,9 @@ public class ConfigParser {
             String idStr = br.readLine();
             String dateStr = br.readLine();
             String accessToken = br.readLine();
+            String primaryThreads = br.readLine();
+            String secondaryThreads = br.readLine();
+
             String line;
             ArrayList<String> groupList = new ArrayList<>();
             while ((line = br.readLine()) != null) {
@@ -33,11 +36,14 @@ public class ConfigParser {
             cal.set(Integer.parseInt(pts[2]), Integer.parseInt(pts[1]) - 1, Integer.parseInt(pts[0]));
             Date dateRestr = cal.getTime();
 
+            int primaryThreadsInt = Integer.parseInt(primaryThreads);
+            int secondaryThreadsInt = Integer.parseInt(secondaryThreads);
+
             List<User> users = new UserDownloader(accessToken).getUsers(new ArrayList<String>(){{add(idStr);}});
             User userToFind = (users != null && !users.isEmpty()) ? users.get(0) : null;
 
             return new Config(userToFind, userToFind != null ? null : idStr, userToFind != null,
-                    groupList, dateRestr, accessToken);
+                    groupList, dateRestr, accessToken, primaryThreadsInt, secondaryThreadsInt);
         }
         catch (Exception e){
             throw new ConfigParseException(e);

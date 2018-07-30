@@ -5,7 +5,7 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
-import static etu.wollen.vk.conf.Config.printDateFormat;
+import static etu.wollen.vk.conf.Config.PRINT_DATE_FORMAT;
 
 public class WallPost extends BaseSearchableEntity{
 	private long postId;
@@ -22,7 +22,7 @@ public class WallPost extends BaseSearchableEntity{
 	}
 	
 	public void print(){
-		SimpleDateFormat dateFormat = new SimpleDateFormat(printDateFormat);
+		SimpleDateFormat dateFormat = new SimpleDateFormat(PRINT_DATE_FORMAT);
 		System.out.println(getPostUrl());
 		System.out.println(dateFormat.format(date));
 		System.out.println(text);

@@ -40,10 +40,26 @@ public class HttpClient {
         } 
     }
     
-    private static SSLSocketFactory socketFactory;
-    private static HostnameVerifier hostnameVerifier;
+    private SSLSocketFactory socketFactory;
+    private HostnameVerifier hostnameVerifier;
+    private boolean debugEnabled = false;
+
+	private static volatile HttpClient instance;
+
+	public static HttpClient getInstance() {
+		HttpClient localInstance = instance;
+		if (localInstance == null) {
+			synchronized (HttpClient.class) {
+				localInstance = instance;
+				if (localInstance == null) {
+					instance = localInstance = new HttpClient();
+				}
+			}
+		}
+		return localInstance;
+	}
     
-    static{
+    private HttpClient(){
         SSLContext sc;
 		try {
 			sc = SSLContext.getInstance("SSL");
@@ -57,7 +73,7 @@ public class HttpClient {
     }
 
 	// send GET and return response in UTF-8
-	private static String sendGET(String urlToRead) throws Exception {
+	private String sendGET(String urlToRead) throws Exception {
 		
 		URL url = new URL(urlToRead);
 		HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
@@ -75,8 +91,8 @@ public class HttpClient {
 		return result.toString();
 	}
 
-	public static String sendGETtimeout(String request, int attempts) throws Exception {
-		String response = "";
+	public String sendGETtimeout(String request, int attempts) throws Exception {
+		String response = null;
 		for (int i = 0; i < attempts; ++i) {
 			try {
 				response = sendGET(request);
@@ -89,7 +105,13 @@ public class HttpClient {
 				}
 			}
 		}
+		if(debugEnabled) {
+			System.out.println("Request >>> " + request + "\n" + "Response <<< " + response);
+		}
 		return response;
 	}
 
+	public void setDebugEnabled(boolean debugEnabled){
+		this.debugEnabled = debugEnabled;
+	}
 }

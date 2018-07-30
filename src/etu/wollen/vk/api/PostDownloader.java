@@ -1,47 +1,93 @@
 package etu.wollen.vk.api;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-
 import etu.wollen.vk.database.DBConnector;
 import etu.wollen.vk.models.Like;
 import etu.wollen.vk.models.WallComment;
 import etu.wollen.vk.models.WallPost;
 import etu.wollen.vk.transport.HttpClient;
-
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
-import static etu.wollen.vk.conf.Config.commentThreads;
-import static etu.wollen.vk.conf.Config.groupThreads;
-import static etu.wollen.vk.conf.Config.version;
+import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static etu.wollen.vk.conf.Config.*;
 
 public class PostDownloader {
-	private String access_token;
-	private Map<Long, String> groupNames = new HashMap<>();
+	private final String accessToken;
+	private final Map<Long, String> groupNames = new HashMap<>();
+
+	public PostDownloader(List<String> groupShortNames, String accessToken){
+		this.accessToken = accessToken;
+		fillGroupNames(groupShortNames);
+	}
 	
-	public PostDownloader(String access_token){
-		this.access_token = access_token;
+	public Map<Long, String> getGroupNames(){
+		return groupNames;
 	}
 
-	public void fillGroupNames(List<String> groupShortNames) {
+	public void parseGroups(final Date dateRestriction) {
+		class WallParser implements Callable<Void> {
+			private long wall_id;
+			private String wall_name;
+			private int count;
+			private ExecutorService executorService;
+
+			private WallParser(long wall_id, String wall_name, int count, ExecutorService executorService) {
+				this.wall_id = wall_id;
+				this.wall_name = wall_name;
+				this.count = count;
+				this.executorService = executorService;
+			}
+
+			@Override
+			public Void call() {
+				System.out.println("Parsing vk.com/club" + wall_id + " (" + wall_name + ")    " + count + " of "
+						+ groupNames.size());
+				getPosts(wall_id * (-1), wall_name, dateRestriction, executorService);
+				return null;
+			}
+
+		}
+
+		ExecutorService primaryExecutor = null;
+		ExecutorService secondaryExecutor = null;
+        try {
+			primaryExecutor = Executors.newFixedThreadPool(PRIMARY_THREADS);
+			secondaryExecutor = Executors.newFixedThreadPool(SECONDARY_THREADS);
+			List<Callable<Void>> workers = new ArrayList<>(groupNames.entrySet().size());
+			int count = 1;
+			for (Map.Entry<Long, String> group : groupNames.entrySet()) {
+				Long wall_id = group.getKey();
+				String wall_name = group.getValue();
+				WallParser worker = new WallParser(wall_id, wall_name, count++, secondaryExecutor);
+				workers.add(worker);
+			}
+			primaryExecutor.invokeAll(workers);
+
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        finally{
+			if(primaryExecutor != null) primaryExecutor.shutdown();
+			if(secondaryExecutor != null) secondaryExecutor.shutdown();
+		}
+	}
+
+	private void fillGroupNames(List<String> groupShortNames) {
 		if (!groupShortNames.isEmpty()) {
 			StringBuilder request = new StringBuilder("https://api.vk.com/method/groups.getById?group_ids=");
 			for (String gr : groupShortNames) {
 				request.append(gr).append(",");
 			}
-			request.append("&v=" + version + "&access_token=").append(access_token);
+			request.append("&v=" + VERSION + "&access_token=").append(accessToken);
 			try {
-				String response = HttpClient.sendGETtimeout(request.toString(), 11);
+				String response = HttpClient.getInstance().sendGETtimeout(request.toString(), 11);
 
 				JSONParser jp = new JSONParser();
 				JSONObject jsonresponse = (JSONObject) jp.parse(response);
@@ -65,71 +111,29 @@ public class PostDownloader {
 			}
 		}
 	}
-	
-	public Map<Long, String> getGroupNames(){
-		return groupNames;
-	}
 
-	public void parseGroups(final Date dateRestr) {
-		class WallParser implements Runnable {
-			private long wall_id;
-			private String wall_name;
-			private int count;
-
-			private WallParser(long wall_id, String wall_name, int count) {
-				this.wall_id = wall_id;
-				this.wall_name = wall_name;
-				this.count = count;
-			}
-
-			@Override
-			public void run() {
-				System.out.println("Parsing vk.com/club" + wall_id + " (" + wall_name + ")    " + count + " of "
-						+ groupNames.size());
-				getPosts(wall_id * (-1), wall_name, dateRestr, access_token);
-				System.gc();
-			}
-
-		}
-		ExecutorService executor = Executors.newFixedThreadPool(groupThreads);
-
-		int count = 1;
-		for (Map.Entry<Long, String> group : groupNames.entrySet()) {
-			Long wall_id = group.getKey();
-			String wall_name = group.getValue();
-			WallParser worker = new WallParser(wall_id, wall_name, count);
-			++count;
-			executor.execute(worker);
-		}
-
-		executor.shutdown();
-        try {
-            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-	}
-
-	private static void getPosts(long wall_id, String wall_name, Date dateRestr, final String access_token) {
+	private void getPosts(long wall_id, String wall_name, Date dateRestriction, ExecutorService secondaryExecutor) {
 		final long count = 100;
 		long offset = 0;
 
+		ExecutorService databaseExecutor = null;
+		Future<?> currentDatabaseTask = null;
 		try {
+			databaseExecutor = Executors.newSingleThreadExecutor();
 			Set<Long> allWallSet = DBConnector.getPostsFromWallIdSet(wall_id);
-
 			boolean allRead = false;
 			while (!allRead) {
 				final List<WallPost> postsToCommit = new ArrayList<>();
 				final List<WallComment> commentsToCommit = new ArrayList<>();
 				final List<Like> likesToCommit = new ArrayList<>();
-				AtomicReference<Exception> nestedThreadException = new AtomicReference<>(null);
+				final AtomicReference<Exception> nestedThreadException = new AtomicReference<>(null);
 
 				/// TODO check timeouts
 				String request = "https://api.vk.com/method/wall.get?owner_id=" + wall_id + "&offset=" + offset
-						+ "&count=" + count + "&v=" + version + "&access_token=" + access_token;
+						+ "&count=" + count + "&v=" + VERSION + "&access_token=" + accessToken;
 				offset += count;
 
-				String response = HttpClient.sendGETtimeout(request, 11);
+				String response = HttpClient.getInstance().sendGETtimeout(request, 11);
 
 				JSONParser jp = new JSONParser();
 				JSONObject jsonresponse = (JSONObject) jp.parse(response);
@@ -173,39 +177,55 @@ public class PostDownloader {
 					}
 
 					// if date restriction reached
-					if (!allRead && wp.getDate().getTime() < dateRestr.getTime()) {
+					if (!allRead && wp.getDate().getTime() < dateRestriction.getTime()) {
 						allRead = true;
 						System.out.println("Date restriction in " + wall_id);
 					}
 				}
 
 				if (postsToCommit.size() > 0) {
-					// downloads comments and likes in multithreads
-					ExecutorService executor = Executors.newFixedThreadPool(commentThreads);
-
+					// downloads comments and likes in multiple threads
+					List<Callable<Void>> workers = new ArrayList<>(2*postsToCommit.size());
 					for (final WallPost wp : postsToCommit) {
-						Runnable worker = () -> {
+						Callable<Void> likesWorker = () -> {
 						    try {
-                                List<WallComment> wcl = getComments(wp.getGroupId(), wp.getPostId(), access_token);
-                                List<Like> lkl = getLikes(wp.getGroupId(), wp.getPostId(), wp.getDate(), access_token);
-                                synchronized (commentsToCommit) {
-                                    commentsToCommit.addAll(wcl);
+                                List<Like> lkl = getLikes(wp.getGroupId(), wp.getPostId(), wp.getDate());
+                                synchronized (likesToCommit) {
                                     likesToCommit.addAll(lkl);
                                 }
                             }
                             catch (Exception e){
 						        nestedThreadException.set(e);
                             }
+                            return null;
                         };
-						executor.execute(worker);
+						Callable<Void> commentsWorker = () -> {
+							try {
+								List<WallComment> wcl = getComments(wp.getGroupId(), wp.getPostId());
+								synchronized (commentsToCommit) {
+									commentsToCommit.addAll(wcl);
+								}
+							}
+							catch (Exception e){
+								nestedThreadException.set(e);
+							}
+							return null;
+						};
+						workers.add(likesWorker);
+						workers.add(commentsWorker);
 					}
-
-					executor.shutdown();
-                    executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+					secondaryExecutor.invokeAll(workers);
                     if(nestedThreadException.get() != null) throw nestedThreadException.get();
 
-					// write to db
-					DBConnector.insertPostsWithComments(postsToCommit, commentsToCommit, likesToCommit);
+					// wait until the previous database task is finished
+					if(currentDatabaseTask != null){
+						currentDatabaseTask.get();
+					}
+					// write to database
+					currentDatabaseTask = databaseExecutor.submit((Callable<Void>) () -> {
+						DBConnector.insertPostsWithComments(postsToCommit, commentsToCommit, likesToCommit);
+						return null;
+					});
 				}
 			}
 		}
@@ -213,9 +233,12 @@ public class PostDownloader {
 			e.printStackTrace();
 			System.out.println("ERROR: Wall " + wall_id + " ("+wall_name+") has not been parsed");
 		}
+		finally{
+			if(databaseExecutor != null) databaseExecutor.shutdown();
+		}
 	}
 
-	private static List<WallComment> getComments(long wall_id, long post_id, String access_token) throws Exception{
+	private List<WallComment> getComments(long wall_id, long post_id) throws Exception{
 		List<WallComment> comments = new ArrayList<>();
 		final long count = 100;
 		long offset = 0;
@@ -232,9 +255,9 @@ public class PostDownloader {
 					try {
                         /// TODO check timeouts
 						request = "https://api.vk.com/method/wall.getComments?owner_id=" + wall_id + "&post_id="
-								+ post_id + "&offset=" + offset + "&count=" + count + "&v=" + version + "&access_token=" + access_token;
+								+ post_id + "&offset=" + offset + "&count=" + count + "&v=" + VERSION + "&access_token=" + accessToken;
 
-						response = HttpClient.sendGETtimeout(request, 11);
+						response = HttpClient.getInstance().sendGETtimeout(request, 11);
 
 						JSONParser jp = new JSONParser();
 						JSONObject jsonresponse = (JSONObject) jp.parse(response);
@@ -282,7 +305,7 @@ public class PostDownloader {
 		return comments;
 	}
 
-	private static List<Like> getLikes(long wall_id, long post_id, Date date, String access_token) throws Exception{
+	private List<Like> getLikes(long wall_id, long post_id, Date date) throws Exception{
 		List<Like> likes = new ArrayList<>();
 		final long count = 100;
 		long offset = 0;
@@ -299,8 +322,8 @@ public class PostDownloader {
 					try {
                         /// TODO check timeouts
 						request = "https://api.vk.com/method/likes.getList?type=post&owner_id=" + wall_id + "&item_id="
-								+ post_id + "&offset=" + offset + "&count=" + count + "&v=" + version + "&access_token=" + access_token;
-						response = HttpClient.sendGETtimeout(request, 11);
+								+ post_id + "&offset=" + offset + "&count=" + count + "&v=" + VERSION + "&access_token=" + accessToken;
+						response = HttpClient.getInstance().sendGETtimeout(request, 11);
 
 						JSONParser jp = new JSONParser();
 						JSONObject jsonresponse = (JSONObject) jp.parse(response);

@@ -9,7 +9,7 @@ import org.json.simple.parser.JSONParser;
 import java.util.ArrayList;
 import java.util.List;
 
-import static etu.wollen.vk.conf.Config.version;
+import static etu.wollen.vk.conf.Config.VERSION;
 
 public class UserDownloader {
 
@@ -27,9 +27,9 @@ public class UserDownloader {
         for(String id: ids) ids_request.append(id).append(",");
 
         String request = "https://api.vk.com/method/users.get?user_ids="+ids_request
-                +"&v="+version+"&access_token=" + access_token;
+                +"&v="+ VERSION +"&access_token=" + access_token;
 
-        String response = HttpClient.sendGETtimeout(request, 11);
+        String response = HttpClient.getInstance().sendGETtimeout(request, 11);
         JSONParser jp = new JSONParser();
         JSONObject jsonresponse = (JSONObject) jp.parse(response);
         JSONArray resp = (JSONArray) jsonresponse.get("response");
@@ -56,9 +56,9 @@ public class UserDownloader {
 
     public List<User> getFriends(User user) throws Exception{
         String request = "https://api.vk.com/method/friends.get?user_id="+user.getId()
-                + "&count=" + MAX_FRIENDS + "&v="+version+"&access_token=" + access_token;
+                + "&count=" + MAX_FRIENDS + "&v="+ VERSION +"&access_token=" + access_token;
 
-        String response = HttpClient.sendGETtimeout(request, 11);
+        String response = HttpClient.getInstance().sendGETtimeout(request, 11);
         JSONParser jp = new JSONParser();
         JSONObject jsonresponse = (JSONObject) jp.parse(response);
         JSONObject resp = (JSONObject) jsonresponse.get("response");

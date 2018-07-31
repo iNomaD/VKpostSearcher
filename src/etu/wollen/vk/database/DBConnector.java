@@ -198,9 +198,9 @@ public class DBConnector {
 		synchronized (conn) {
 			conn.setAutoCommit(false);
 			try {
-				insertPosts(wpl);
-				insertComments(wcl);
-				insertLikes(likes);
+				if(!wpl.isEmpty())insertPosts(wpl);
+				if(!wcl.isEmpty())insertComments(wcl);
+				if(!likes.isEmpty()) insertLikes(likes);
 			} catch (SQLException e) {
 				conn.rollback();
 				throw e;

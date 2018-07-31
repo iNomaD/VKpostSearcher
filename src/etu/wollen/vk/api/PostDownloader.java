@@ -168,7 +168,6 @@ public class PostDownloader {
 					if (allWallSet.contains(post_id)) {
 						if (!allRead && allWallSet.size() >= posts_count) {
 							allRead = true;
-							System.out.println("All posts in " + wall_id + " ("+wall_name+") have been parsed");
 						}
 					} else {
 						// stash in memory
@@ -227,6 +226,15 @@ public class PostDownloader {
 						return null;
 					});
 				}
+			}
+
+			// wait until the last database task is finished if exists
+			if(currentDatabaseTask != null){
+				currentDatabaseTask.get();
+				System.out.println("All posts in " + wall_id + " ("+wall_name+") have been parsed");
+			}
+			else{
+				System.out.println("No new posts in " + wall_id + " ("+wall_name+")");
 			}
 		}
 		catch (Exception e) {

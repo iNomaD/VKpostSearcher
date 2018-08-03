@@ -99,6 +99,9 @@ public class HttpClient {
 				break; // exit cycle
 			} catch (Exception e) {
 				if (i < attempts - 1) {
+					if(debugEnabled) {
+						System.out.println("Request >>> " + request + System.lineSeparator());
+					}
 					System.out.println("Connection timed out... " + (attempts - i - 1) + " more attempts...");
 				} else {
 					throw e;
@@ -106,7 +109,7 @@ public class HttpClient {
 			}
 		}
 		if(debugEnabled) {
-			System.out.println("Request >>> " + request + "\n" + "Response <<< " + response);
+			System.out.println("Request >>> " + request + System.lineSeparator() + "Response <<< " + response);
 		}
 		return response;
 	}

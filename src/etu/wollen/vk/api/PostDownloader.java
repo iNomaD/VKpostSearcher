@@ -1,6 +1,6 @@
 package etu.wollen.vk.api;
 
-import etu.wollen.vk.database.DBConnector;
+import etu.wollen.vk.database.DatabaseUtils;
 import etu.wollen.vk.models.Like;
 import etu.wollen.vk.models.WallComment;
 import etu.wollen.vk.models.WallPost;
@@ -120,7 +120,7 @@ public class PostDownloader {
 		Future<?> currentDatabaseTask = null;
 		try {
 			databaseExecutor = Executors.newSingleThreadExecutor();
-			Set<Long> allWallSet = DBConnector.getPostsFromWallIdSet(wall_id);
+			Set<Long> allWallSet = DatabaseUtils.getPostsIdSetFromWall(wall_id);
 			boolean allRead = false;
 			while (!allRead) {
 				final List<WallPost> postsToCommit = new ArrayList<>();
@@ -222,7 +222,7 @@ public class PostDownloader {
 					}
 					// write to database
 					currentDatabaseTask = databaseExecutor.submit((Callable<Void>) () -> {
-						DBConnector.insertPostsWithComments(postsToCommit, commentsToCommit, likesToCommit);
+						DatabaseUtils.insertPostsWithData(postsToCommit, commentsToCommit, likesToCommit);
 						return null;
 					});
 				}
@@ -315,7 +315,7 @@ public class PostDownloader {
 
 	private List<Like> getLikes(long wall_id, long post_id, Date date) throws Exception{
 		List<Like> likes = new ArrayList<>();
-		final long count = 100;
+		final long count = 1000;
 		long offset = 0;
 		long likesRead = 0;
 		String request = "";

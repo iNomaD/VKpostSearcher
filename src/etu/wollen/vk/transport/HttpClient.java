@@ -43,6 +43,7 @@ public class HttpClient {
     private SSLSocketFactory socketFactory;
     private HostnameVerifier hostnameVerifier;
     private boolean debugEnabled = false;
+	private long lastCall = 0;
 
 	private static volatile HttpClient instance;
 
@@ -91,11 +92,26 @@ public class HttpClient {
 		return result.toString();
 	}
 
+	private String sendGET(String urlToRead, int delay) throws Exception {
+		if(delay <= 0) return sendGET(urlToRead);
+
+		synchronized (this) {
+			long currentTime = System.currentTimeMillis();
+			long diff = currentTime - lastCall;
+			if (delay > diff) {
+				Thread.sleep(delay - diff);
+			}
+			String response = sendGET(urlToRead);
+			lastCall = System.currentTimeMillis();
+			return response;
+		}
+	}
+
 	public String sendGETtimeout(String request, int attempts) throws Exception {
 		String response = null;
 		for (int i = 0; i < attempts; ++i) {
 			try {
-				response = sendGET(request);
+				response = sendGET(request, 334);
 				break; // exit cycle
 			} catch (Exception e) {
 				if (i < attempts - 1) {

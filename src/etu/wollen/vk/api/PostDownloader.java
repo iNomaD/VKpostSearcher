@@ -97,14 +97,14 @@ public class PostDownloader {
 					long gid = (long) item.get("id");
 					String name = (String) item.get("name");
 					long is_closed = (long) item.get("is_closed");
-					if(is_closed == 0){
+					//if(is_closed == 0){
 						groupNames.put(gid, name);
-					}
-					else{
-						// TODO check whether the user is a member of the private group
-						String screen_name = (String) item.get("screen_name");
-						System.out.println("Closed group: " + screen_name);
-					}
+					//}
+//					else{
+//						// TODO check whether the user is a member of the private group
+//						String screen_name = (String) item.get("screen_name");
+//						System.out.println("Closed group: " + screen_name);
+//					}
 				}
 			} catch (Exception e) {
 				e.printStackTrace();

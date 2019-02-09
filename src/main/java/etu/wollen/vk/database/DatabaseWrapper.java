@@ -10,7 +10,8 @@ import java.util.regex.Pattern;
 public class DatabaseWrapper {
     private static volatile DatabaseWrapper instance;
 
-    private Connection conn = null;
+    private Connection conn;
+    private String databaseFilename;
 
     public static DatabaseWrapper getInstance() {
         DatabaseWrapper localInstance = instance;
@@ -29,7 +30,7 @@ public class DatabaseWrapper {
 
     private Connection connect() throws SQLException, ClassNotFoundException {
         Class.forName("org.sqlite.JDBC");
-        Connection connection = DriverManager.getConnection("jdbc:sqlite:vkgroups.s3db");
+        Connection connection = DriverManager.getConnection("jdbc:sqlite:" + databaseFilename);
 
         // Create regexp() function to make the REGEXP operator available
         Function.create(connection, "REGEXP", new Function() {
@@ -48,10 +49,10 @@ public class DatabaseWrapper {
     }
 
     public Connection getConnection() throws SQLException {
-        if(conn == null){
+        if (conn == null) {
             try {
                 conn = connect();
-                System.out.println("DB connected!");
+                System.out.println("Database connected: " + databaseFilename);
             }
             catch (ClassNotFoundException e){
                 throw new SQLException(e);
@@ -61,6 +62,13 @@ public class DatabaseWrapper {
     }
 
     public void closeConnection() throws SQLException {
-        if(conn != null) conn.close();
+        if(conn != null) {
+            conn.close();
+            System.out.println("Database closed: " + databaseFilename);
+        }
+    }
+
+    public void setDatabaseFilename(String databaseFilename) {
+        this.databaseFilename = databaseFilename;
     }
 }

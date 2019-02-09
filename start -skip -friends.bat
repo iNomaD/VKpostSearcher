@@ -1,1 +1,1 @@
-java -jar VKpostSearcher_jar -skip -friends
+java -jar VKPostSearcher.jar -sqlite:vkgroups.s3db -skip -friends

@@ -1,1 +1,1 @@
-java -jar VKpostSearcher_jar
+java -jar VKPostSearcher.jar -sqlite:vkgroups.s3db

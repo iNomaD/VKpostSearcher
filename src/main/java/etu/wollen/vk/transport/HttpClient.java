@@ -1,6 +1,7 @@
 package etu.wollen.vk.transport;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.security.KeyManagementException;
@@ -15,6 +16,8 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
+
+import static etu.wollen.vk.conf.Config.HTTP_MAX_ATTEMPTS;
 
 public class HttpClient {
 	
@@ -42,7 +45,9 @@ public class HttpClient {
     
     private SSLSocketFactory socketFactory;
     private HostnameVerifier hostnameVerifier;
+
     private boolean debugEnabled = false;
+    private int delayMillis = 0;
 	private long lastCall = 0;
 
 	private static volatile HttpClient instance;
@@ -74,7 +79,7 @@ public class HttpClient {
     }
 
 	// send GET and return response in UTF-8
-	private String sendGET(String urlToRead) throws Exception {
+	private String sendGet(String urlToRead) throws IOException {
 		
 		URL url = new URL(urlToRead);
 		HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
@@ -92,8 +97,8 @@ public class HttpClient {
 		return result.toString();
 	}
 
-	private String sendGET(String urlToRead, int delay) throws Exception {
-		if(delay <= 0) return sendGET(urlToRead);
+	private String sendGet(String urlToRead, int delay) throws IOException, InterruptedException {
+		if(delay <= 0) return sendGet(urlToRead);
 
 		synchronized (this) {
 			long currentTime = System.currentTimeMillis();
@@ -101,30 +106,31 @@ public class HttpClient {
 			if (delay > diff) {
 				Thread.sleep(delay - diff);
 			}
-			String response = sendGET(urlToRead);
+			String response = sendGet(urlToRead);
 			lastCall = System.currentTimeMillis();
 			return response;
 		}
 	}
 
-	public String sendGETtimeout(String request, int attempts) throws Exception {
+	public String httpGet(String request) throws IOException, InterruptedException {
 		String response = null;
-		for (int i = 0; i < attempts; ++i) {
+		for (int i = 0; i < HTTP_MAX_ATTEMPTS; ++i) {
 			try {
-				response = sendGET(request, 334);
-				break; // exit cycle
-			} catch (Exception e) {
-				if (i < attempts - 1) {
+				response = sendGet(request, delayMillis);
+				break;
+			} catch (IOException e) {
+				if (i < HTTP_MAX_ATTEMPTS - 1) {
+					// TODO logging with log4j
 					if(debugEnabled) {
 						System.out.println("Request >>> " + request + System.lineSeparator());
 					}
-					System.out.println("Connection timed out... " + (attempts - i - 1) + " more attempts...");
+					System.out.println("Connection timed out... " + (HTTP_MAX_ATTEMPTS - i - 1) + " more attempts...");
 				} else {
 					throw e;
 				}
 			}
 		}
-		if(debugEnabled) {
+		if (debugEnabled) {
 			System.out.println("Request >>> " + request + System.lineSeparator() + "Response <<< " + response);
 		}
 		return response;
@@ -132,5 +138,9 @@ public class HttpClient {
 
 	public void setDebugEnabled(boolean debugEnabled){
 		this.debugEnabled = debugEnabled;
+	}
+
+	public void setDelay(int delayMillis){
+		this.delayMillis = delayMillis;
 	}
 }

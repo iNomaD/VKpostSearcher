@@ -1,6 +1,6 @@
 package etu.wollen.vk.api;
 
-import etu.wollen.vk.models.User;
+import etu.wollen.vk.model.conf.User;
 import etu.wollen.vk.transport.HttpClient;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -10,11 +10,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static etu.wollen.vk.conf.Config.VERSION;
+import static etu.wollen.vk.conf.Config.VK_API_URL;
 
 public class UserDownloader {
 
     private static final long INVALID_USER_ID_CODE = 113;
     private static final long MAX_FRIENDS = 250;
+
+    private static final String REQUEST_USERS_GET = VK_API_URL + "users.get?user_ids=%s&access_token=%s&v=" + VERSION;
+    private static final String REQUEST_FRIENDS_GET = VK_API_URL + "friends.get?user_id=%s&count=%s&access_token=%s&v=" + VERSION;
 
     private String access_token;
 
@@ -22,20 +26,15 @@ public class UserDownloader {
         this.access_token = access_token;
     }
 
-    public List<User> getUsers(List<String> ids) throws Exception{
-        StringBuilder ids_request = new StringBuilder();
-        for(String id: ids) ids_request.append(id).append(",");
-
-        String request = "https://api.vk.com/method/users.get?user_ids="+ids_request
-                +"&v="+ VERSION +"&access_token=" + access_token;
-
-        String response = HttpClient.getInstance().sendGETtimeout(request, 11);
+    public List<User> getUsers(List<String> ids) throws Exception {
+        String request = String.format(REQUEST_USERS_GET, String.join(",", ids), access_token);
+        String response = HttpClient.getInstance().httpGet(request);
         JSONParser jp = new JSONParser();
         JSONObject jsonresponse = (JSONObject) jp.parse(response);
         JSONArray resp = (JSONArray) jsonresponse.get("response");
-        if(resp != null){
+        if (resp != null) {
             List<User> users = new ArrayList<>();
-            for(int i=0; i<resp.size(); ++i){
+            for (int i=0; i<resp.size(); ++i){
                 JSONObject user = (JSONObject)resp.get(i);
                 long id = (long) user.get("id");
                 String first = (String) user.get("first_name");
@@ -44,10 +43,10 @@ public class UserDownloader {
             }
             return users;
         }
-        else{
+        else {
             JSONObject error = (JSONObject) jsonresponse.get("error");
             long error_code = (long) error.get("error_code");
-            if(error_code == INVALID_USER_ID_CODE){
+            if (error_code == INVALID_USER_ID_CODE) {
                 return null;
             }
             throw new Exception(error.toJSONString());
@@ -55,23 +54,21 @@ public class UserDownloader {
     }
 
     public List<User> getFriends(User user) throws Exception{
-        String request = "https://api.vk.com/method/friends.get?user_id="+user.getId()
-                + "&count=" + MAX_FRIENDS + "&v="+ VERSION +"&access_token=" + access_token;
-
-        String response = HttpClient.getInstance().sendGETtimeout(request, 11);
+        String request = String.format(REQUEST_FRIENDS_GET, user.getId(), MAX_FRIENDS, access_token);
+        String response = HttpClient.getInstance().httpGet(request);
         JSONParser jp = new JSONParser();
         JSONObject jsonresponse = (JSONObject) jp.parse(response);
         JSONObject resp = (JSONObject) jsonresponse.get("response");
-        if(resp != null){
+        if (resp != null){
             JSONArray items = (JSONArray)resp.get("items");
             List<String> ids = new ArrayList<>();
-            for(int i=0; i<items.size(); ++i){
+            for (int i=0; i<items.size(); ++i){
                 long id = (long) items.get(i);
                 ids.add(Long.toString(id));
             }
             return !ids.isEmpty() ? getUsers(ids) : new ArrayList<>();
         }
-        else{
+        else {
             JSONObject error = (JSONObject) jsonresponse.get("error");
             throw new Exception(error.toJSONString());
         }

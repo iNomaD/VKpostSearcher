@@ -1,12 +1,13 @@
 package etu.wollen.vk.database;
 
-import etu.wollen.vk.models.Like;
-import etu.wollen.vk.models.WallComment;
-import etu.wollen.vk.models.WallPost;
+import etu.wollen.vk.model.database.BoardComment;
+import etu.wollen.vk.model.database.WallPost;
+import etu.wollen.vk.model.database.WallPostComment;
+import etu.wollen.vk.model.database.WallPostLike;
 
 import java.sql.*;
-import java.util.*;
 import java.util.Date;
+import java.util.*;
 
 public class DatabaseUtils {
 	private static final String POSTS_TABLE_NAME = "POSTS";
@@ -37,7 +38,7 @@ public class DatabaseUtils {
 	private static final String LIKES_DATE_NAME = "LIKES_DATE";
 	private static final String LIKES_USER_INDEX = "LIKES_USER_INDEX";
 
-	private static final Object lock = new Object();
+	private DatabaseUtils(){}
 
 	public static void createDB() throws SQLException {
 		try(Statement stat = DatabaseWrapper.getInstance().getConnection().createStatement()) {
@@ -72,13 +73,8 @@ public class DatabaseUtils {
 		}
 	}
 
-	public static void closeDB(){
-		try {
-			DatabaseWrapper.getInstance().closeConnection();
-		}
-		catch (Exception e){
-			e.printStackTrace();
-		}
+	public static void closeDB() throws SQLException{
+		DatabaseWrapper.getInstance().closeConnection();
 	}
 	
 	public static Set<Long> getPostsIdSetFromWall(long wall_id) throws SQLException {
@@ -93,10 +89,15 @@ public class DatabaseUtils {
 		return posts;
 	}
 
-	public static List<WallPost> getPostsByPattern(String regex) throws SQLException {
+	public static Set<Long> getBoardCommentsIdSetFromWall(long groupId, long boardId) throws SQLException {
+		// TODO
+		return new HashSet<>();
+	}
+
+	public static List<WallPost> getPostsByPattern(String regex, Date dateRestriction) throws SQLException {
 		List<WallPost> posts = new ArrayList<>();
 		try(Statement stat = DatabaseWrapper.getInstance().getConnection().createStatement();
-			ResultSet resSet = stat.executeQuery("SELECT * FROM " + POSTS_TABLE_NAME + " WHERE " + POST_TEXT_NAME + " REGEXP '" + regex + "'")) {
+			ResultSet resSet = stat.executeQuery("SELECT * FROM " + POSTS_TABLE_NAME + " WHERE " + POST_DATE_NAME + " >= " + dateRestriction.getTime() + " AND " + POST_TEXT_NAME + " REGEXP '" + regex + "'")) {
 				while (resSet.next()) {
 					long post_id = resSet.getLong(POST_ID_NAME);
 					long group_id = resSet.getLong(POST_GROUP_NAME);
@@ -109,25 +110,25 @@ public class DatabaseUtils {
 		return posts;
 	}
 
-	public static List<WallPost> getPostsBySigner(long signer_id) throws SQLException {
+	public static List<WallPost> getPostsBySigner(long user) throws SQLException {
 		List<WallPost> posts = new ArrayList<>();
 		try(Statement stat = DatabaseWrapper.getInstance().getConnection().createStatement();
-			ResultSet resSet = stat.executeQuery("SELECT * FROM " + POSTS_TABLE_NAME + " WHERE " + POST_SIGNER_ID_NAME + " = " + signer_id)) {
+			ResultSet resSet = stat.executeQuery("SELECT * FROM " + POSTS_TABLE_NAME + " WHERE " + POST_SIGNER_ID_NAME + " = " + user)) {
 				while (resSet.next()) {
 					long post_id = resSet.getLong(POST_ID_NAME);
 					long group_id = resSet.getLong(POST_GROUP_NAME);
 					long date = resSet.getLong(POST_DATE_NAME);
 					String text = resSet.getString(POST_TEXT_NAME);
-					posts.add(new WallPost(post_id, group_id, signer_id, new Date(date), text));
+					posts.add(new WallPost(post_id, group_id, user, new Date(date), text));
 				}
 			}
 		return posts;
 	}
 	
-	public static List<WallComment> getCommentsByPattern(String regex) throws SQLException {
-		List<WallComment> posts = new ArrayList<>();
+	public static List<WallPostComment> getCommentsByPattern(String regex, Date dateRestriction) throws SQLException {
+		List<WallPostComment> posts = new ArrayList<>();
 		try(Statement stat = DatabaseWrapper.getInstance().getConnection().createStatement();
-			ResultSet resSet = stat.executeQuery("SELECT * FROM " + COMMENTS_TABLE_NAME + " WHERE " + COMMENT_TEXT_NAME + " REGEXP '" + regex + "'")) {
+			ResultSet resSet = stat.executeQuery("SELECT * FROM " + COMMENTS_TABLE_NAME + " WHERE " + COMMENT_DATE_NAME + " >= " + dateRestriction.getTime() + " AND " + COMMENT_TEXT_NAME + " REGEXP '" + regex + "'")) {
 				while (resSet.next()) {
 					long comment_id = resSet.getLong(COMMENT_ID_NAME);
 					long from_id = resSet.getLong(COMMENT_FROM_ID_NAME);
@@ -136,16 +137,16 @@ public class DatabaseUtils {
 					long group_id = resSet.getLong(COMMENT_GROUP_ID_NAME);
 					long post_id = resSet.getLong(COMMENT_POST_ID_NAME);
 					long reply = resSet.getLong(COMMENT_REPLY_NAME);
-					posts.add(new WallComment(comment_id, from_id, new Date(date), text, group_id, post_id, reply));
+					posts.add(new WallPostComment(comment_id, from_id, new Date(date), text, group_id, post_id, reply));
 				}
 		}
 		return posts;
 	}
 
-	public static List<WallComment> getCommentsBySigner(long signer_id) throws SQLException {
-		List<WallComment> posts = new ArrayList<>();
+	public static List<WallPostComment> getCommentsBySigner(long user) throws SQLException {
+		List<WallPostComment> posts = new ArrayList<>();
 		try(Statement stat = DatabaseWrapper.getInstance().getConnection().createStatement();
-			ResultSet resSet = stat.executeQuery("SELECT * FROM " + COMMENTS_TABLE_NAME + " WHERE " + COMMENT_FROM_ID_NAME + " = " + signer_id)) {
+			ResultSet resSet = stat.executeQuery("SELECT * FROM " + COMMENTS_TABLE_NAME + " WHERE " + COMMENT_FROM_ID_NAME + " = " + user)) {
 				while (resSet.next()) {
 					long comment_id = resSet.getLong(COMMENT_ID_NAME);
 					long date = resSet.getLong(COMMENT_DATE_NAME);
@@ -153,16 +154,16 @@ public class DatabaseUtils {
 					long group_id = resSet.getLong(COMMENT_GROUP_ID_NAME);
 					long post_id = resSet.getLong(COMMENT_POST_ID_NAME);
 					long reply = resSet.getLong(COMMENT_REPLY_NAME);
-					posts.add(new WallComment(comment_id, signer_id, new Date(date), text, group_id, post_id, reply));
+					posts.add(new WallPostComment(comment_id, user, new Date(date), text, group_id, post_id, reply));
 				}
 		}
 		return posts;
 	}
 
-	public static List<WallComment> getCommentsByReply(long signer_id) throws SQLException {
-		List<WallComment> posts = new ArrayList<>();
+	public static List<WallPostComment> getCommentsByReply(long user) throws SQLException {
+		List<WallPostComment> posts = new ArrayList<>();
 		try(Statement stat = DatabaseWrapper.getInstance().getConnection().createStatement();
-			ResultSet resSet = stat.executeQuery("SELECT * FROM " + COMMENTS_TABLE_NAME + " WHERE " + COMMENT_REPLY_NAME + " = " + signer_id)) {
+			ResultSet resSet = stat.executeQuery("SELECT * FROM " + COMMENTS_TABLE_NAME + " WHERE " + COMMENT_REPLY_NAME + " = " + user)) {
 				while (resSet.next()) {
 					long comment_id = resSet.getLong(COMMENT_ID_NAME);
 					long date = resSet.getLong(COMMENT_DATE_NAME);
@@ -170,14 +171,14 @@ public class DatabaseUtils {
 					long group_id = resSet.getLong(COMMENT_GROUP_ID_NAME);
 					long post_id = resSet.getLong(COMMENT_POST_ID_NAME);
 					long reply = resSet.getLong(COMMENT_REPLY_NAME);
-					posts.add(new WallComment(comment_id, signer_id, new Date(date), text, group_id, post_id, reply));
+					posts.add(new WallPostComment(comment_id, user, new Date(date), text, group_id, post_id, reply));
 				}
 		}
 		return posts;
 	}
 	
-	public static List<Like> getLikesByUser(long user) throws SQLException {
-		List<Like> likes = new ArrayList<>();
+	public static List<WallPostLike> getLikesByUser(long user) throws SQLException {
+		List<WallPostLike> likes = new ArrayList<>();
 		try(Statement stat = DatabaseWrapper.getInstance().getConnection().createStatement();
 			ResultSet resSet = stat.executeQuery("SELECT * FROM " + LIKES_TABLE_NAME + " WHERE " + LIKES_USER_NAME + " = " + user)){
 			while (resSet.next()) {
@@ -185,27 +186,43 @@ public class DatabaseUtils {
 				long owner = resSet.getLong(LIKES_OWNER_NAME);
 				long item = resSet.getLong(LIKES_ITEM_NAME);
 				long date = resSet.getLong(LIKES_DATE_NAME);
-				likes.add(new Like(user, type, owner, item, new Date(date)));
+				likes.add(new WallPostLike(user, type, owner, item, new Date(date)));
 			}
 		}
 		return likes;
 	}
 
-	public static void insertPostsWithData(List<WallPost> posts, List<WallComment> comments, List<Like> likes) throws SQLException {
-		synchronized (lock) {
-			Connection conn = DatabaseWrapper.getInstance().getConnection();
-			conn.setAutoCommit(false);
-			try {
-				if(!posts.isEmpty())insertPosts(posts);
-				if(!comments.isEmpty())insertComments(comments);
-				if(!likes.isEmpty()) insertLikes(likes);
-			} catch (SQLException e) {
-				conn.rollback();
-				throw e;
-			} finally {
-				conn.commit();
-				conn.setAutoCommit(true);
-			}
+	public static synchronized void insertPostsWithData(List<WallPost> posts, List<WallPostComment> comments, List<WallPostLike> likes) throws SQLException {
+		Connection conn = DatabaseWrapper.getInstance().getConnection();
+		conn.setAutoCommit(false);
+		try {
+			if(!posts.isEmpty())
+				insertPosts(posts);
+			if(!comments.isEmpty())
+				insertComments(comments);
+			if(!likes.isEmpty())
+				insertLikes(likes);
+		} catch (SQLException e) {
+			conn.rollback();
+			throw e;
+		} finally {
+			conn.commit();
+			conn.setAutoCommit(true);
+		}
+	}
+
+	public static synchronized void insertBoardCommentsWithData(List<BoardComment> boardComments) throws SQLException {
+		Connection conn = DatabaseWrapper.getInstance().getConnection();
+		conn.setAutoCommit(false);
+		try {
+			if(!boardComments.isEmpty())
+				insertBoardComments(boardComments);
+		} catch (SQLException e) {
+			conn.rollback();
+			throw e;
+		} finally {
+			conn.commit();
+			conn.setAutoCommit(true);
 		}
 	}
 
@@ -226,29 +243,33 @@ public class DatabaseUtils {
 		}
 	}
 
-	private static void insertComments(List<WallComment> wcl) throws SQLException {
+	private static void insertBoardComments(List<BoardComment> bcl) throws SQLException {
+		// TODO
+	}
+
+	private static void insertComments(List<WallPostComment> wcl) throws SQLException {
 		try(PreparedStatement prep = DatabaseWrapper.getInstance().getConnection()
 				.prepareStatement("INSERT INTO " + COMMENTS_TABLE_NAME + " VALUES (?, ?, ?, ?, ?, ?, ?, ?);")) {
 
-			for (WallComment wc : wcl) {
-				prep.setLong(2, wc.getComment_id());
-				prep.setLong(3, wc.getFrom_id());
+			for (WallPostComment wc : wcl) {
+				prep.setLong(2, wc.getCommentId());
+				prep.setLong(3, wc.getFromId());
 				prep.setLong(4, wc.getDate().getTime());
 				prep.setString(5, wc.getText());
-				prep.setLong(6, wc.getGroup_id());
-				prep.setLong(7, wc.getPost_id());
-				prep.setLong(8, wc.getReply_to_user());
+				prep.setLong(6, wc.getGroupId());
+				prep.setLong(7, wc.getPostId());
+				prep.setLong(8, wc.getReplyToUser());
 				prep.addBatch();
 			}
 			prep.executeBatch();
 		}
 	}
 
-	private static void insertLikes(List<Like> lkl) throws SQLException {
+	private static void insertLikes(List<WallPostLike> lkl) throws SQLException {
 		try(PreparedStatement prep = DatabaseWrapper.getInstance().getConnection()
 				.prepareStatement("INSERT INTO " + LIKES_TABLE_NAME + " VALUES (?, ?, ?, ?, ?, ?);")) {
 
-			for (Like like : lkl) {
+			for (WallPostLike like : lkl) {
 				prep.setLong(2, like.getUser());
 				prep.setString(3, like.getType());
 				prep.setLong(4, like.getOwnerId());

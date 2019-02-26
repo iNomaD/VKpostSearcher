@@ -16,8 +16,8 @@ public class DatabaseUtils {
 	private static final String POST_SIGNER_ID_NAME = "POST_SIGNER_ID";
 	private static final String POST_DATE_NAME = "POST_DATE";
 	private static final String POST_TEXT_NAME = "POST_TEXT";
-	private static final String POST_GROUP_INDEX = "GROUP_INDEX";
-	private static final String POST_SIGNER_ID_INDEX = "POST_SIGNER_ID_INDEX";
+	private static final String POST_GROUP_INDEX_NAME = "GROUP_INDEX";
+	private static final String POST_SIGNER_ID_INDEX_NAME = "POST_SIGNER_ID_INDEX";
 
 	private static final String COMMENTS_TABLE_NAME = "COMMENTS";
 	private static final String COMMENT_ID_NAME = "COMMENT_ID";
@@ -27,8 +27,8 @@ public class DatabaseUtils {
 	private static final String COMMENT_GROUP_ID_NAME = "COMMENT_GROUP_ID";
 	private static final String COMMENT_POST_ID_NAME = "COMMENT_POST_ID";
 	private static final String COMMENT_REPLY_NAME = "COMMENT_REPLY";
-	private static final String COMMENT_FROM_ID_INDEX = "COMMENT_FROM_ID_INDEX";
-	private static final String COMMENT_REPLY_INDEX = "COMMENT_REPLY_INDEX";
+	private static final String COMMENT_FROM_ID_INDEX_NAME = "COMMENT_FROM_ID_INDEX";
+	private static final String COMMENT_REPLY_INDEX_NAME = "COMMENT_REPLY_INDEX";
 
 	private static final String LIKES_TABLE_NAME = "LIKES";
 	private static final String LIKES_USER_NAME = "LIKES_USER";
@@ -36,31 +36,65 @@ public class DatabaseUtils {
 	private static final String LIKES_OWNER_NAME = "LIKES_OWNER";
 	private static final String LIKES_ITEM_NAME = "LIKES_ITEM";
 	private static final String LIKES_DATE_NAME = "LIKES_DATE";
-	private static final String LIKES_USER_INDEX = "LIKES_USER_INDEX";
+	private static final String LIKES_USER_INDEX_NAME = "LIKES_USER_INDEX";
+
+    private static final String BOARD_COMMENTS_TABLE_NAME = "BOARD_COMMENTS";
+    private static final String BOARD_COMMENT_ID_NAME = "BOARD_COMMENT_ID";
+    private static final String BOARD_COMMENT_GROUP_ID_NAME = "BOARD_COMMENT_GROUP_ID";
+    private static final String BOARD_COMMENT_TOPIC_ID_NAME = "BOARD_COMMENT_TOPIC_ID";
+    private static final String BOARD_COMMENT_FROM_ID_NAME = "BOARD_COMMENT_FROM_ID";
+    private static final String BOARD_COMMENT_DATE_NAME = "BOARD_COMMENT_DATE";
+    private static final String BOARD_COMMENT_TEXT_NAME = "BOARD_COMMENT_TEXT";
+    private static final String BOARD_COMMENT_GROUP_TOPIC_INDEX_NAME = "BOARD_COMMENT_GROUP_TOPIC_INDEX";
+    private static final String BOARD_COMMENT_FROM_ID_INDEX_NAME = "BOARD_COMMENT_FROM_ID_INDEX";
 
 	private DatabaseUtils(){}
 
 	public static void createDB() throws SQLException {
 		try(Statement stat = DatabaseWrapper.getInstance().getConnection().createStatement()) {
 
-			stat.execute("CREATE TABLE if not exists " + POSTS_TABLE_NAME + " (ID INTEGER PRIMARY KEY AUTOINCREMENT, "
-					+ POST_ID_NAME + " INTEGER , " + POST_GROUP_NAME + " INTEGER, " + POST_SIGNER_ID_NAME + " INTEGER, "
-					+ POST_DATE_NAME + " INTEGER, " + POST_TEXT_NAME + " TEXT);");
+			stat.execute("CREATE TABLE if not exists " + POSTS_TABLE_NAME
+					+ " (ID INTEGER PRIMARY KEY AUTOINCREMENT, "
+					+ POST_ID_NAME + " INTEGER, "
+					+ POST_GROUP_NAME + " INTEGER, "
+					+ POST_SIGNER_ID_NAME + " INTEGER, "
+					+ POST_DATE_NAME + " INTEGER, "
+					+ POST_TEXT_NAME + " TEXT);");
 
-			stat.execute("CREATE TABLE if not exists " + COMMENTS_TABLE_NAME + " (ID INTEGER PRIMARY KEY AUTOINCREMENT, "
-					+ COMMENT_ID_NAME + " INTEGER, " + COMMENT_FROM_ID_NAME + " INTEGER, " + COMMENT_DATE_NAME
-					+ " INTEGER, " + COMMENT_TEXT_NAME + " TEXT, " + COMMENT_GROUP_ID_NAME + " INTEGER, "
-					+ COMMENT_POST_ID_NAME + " INTEGER, " + COMMENT_REPLY_NAME + " INTEGER);");
+			stat.execute("CREATE TABLE if not exists " + COMMENTS_TABLE_NAME
+					+ " (ID INTEGER PRIMARY KEY AUTOINCREMENT, "
+					+ COMMENT_ID_NAME + " INTEGER, "
+					+ COMMENT_FROM_ID_NAME + " INTEGER, "
+					+ COMMENT_DATE_NAME + " INTEGER, "
+					+ COMMENT_TEXT_NAME + " TEXT, "
+					+ COMMENT_GROUP_ID_NAME + " INTEGER, "
+					+ COMMENT_POST_ID_NAME + " INTEGER, "
+					+ COMMENT_REPLY_NAME + " INTEGER);");
 
-			stat.execute("CREATE TABLE if not exists " + LIKES_TABLE_NAME + " (ID INTEGER PRIMARY KEY AUTOINCREMENT, "
-					+ LIKES_USER_NAME + " INTEGER , " + LIKES_TYPE_NAME + " TEXT, " + LIKES_OWNER_NAME + " INTEGER, "
-					+ LIKES_ITEM_NAME + " INTEGER, " + LIKES_DATE_NAME + " INTEGER);");
+			stat.execute("CREATE TABLE if not exists " + LIKES_TABLE_NAME
+					+ " (ID INTEGER PRIMARY KEY AUTOINCREMENT, "
+					+ LIKES_USER_NAME + " INTEGER, "
+					+ LIKES_TYPE_NAME + " TEXT, "
+					+ LIKES_OWNER_NAME + " INTEGER, "
+					+ LIKES_ITEM_NAME + " INTEGER, "
+					+ LIKES_DATE_NAME + " INTEGER);");
 
-			stat.execute("CREATE INDEX IF NOT EXISTS " + POST_GROUP_INDEX + " ON " + POSTS_TABLE_NAME + " (" + POST_GROUP_NAME + ");");
-			stat.execute("CREATE INDEX IF NOT EXISTS " + POST_SIGNER_ID_INDEX + " ON " + POSTS_TABLE_NAME + " (" + POST_SIGNER_ID_NAME + ");");
-			stat.execute("CREATE INDEX IF NOT EXISTS " + COMMENT_FROM_ID_INDEX + " ON " + COMMENTS_TABLE_NAME + " (" + COMMENT_FROM_ID_NAME + ");");
-			stat.execute("CREATE INDEX IF NOT EXISTS " + COMMENT_REPLY_INDEX + " ON " + COMMENTS_TABLE_NAME + " (" + COMMENT_REPLY_NAME + ");");
-			stat.execute("CREATE INDEX IF NOT EXISTS " + LIKES_USER_INDEX + " ON " + LIKES_TABLE_NAME + " (" + LIKES_USER_NAME + ");");
+			stat.execute("CREATE TABLE if not exists " + BOARD_COMMENTS_TABLE_NAME
+					+ " (ID INTEGER PRIMARY KEY AUTOINCREMENT, "
+                    + BOARD_COMMENT_ID_NAME + " INTEGER, "
+					+ BOARD_COMMENT_GROUP_ID_NAME + " INTEGER, "
+					+ BOARD_COMMENT_TOPIC_ID_NAME + " INTEGER, "
+					+ BOARD_COMMENT_FROM_ID_NAME + " INTEGER, "
+					+ BOARD_COMMENT_DATE_NAME + " INTEGER, "
+					+ BOARD_COMMENT_TEXT_NAME + " TEXT);");
+
+			stat.execute("CREATE INDEX IF NOT EXISTS " + POST_GROUP_INDEX_NAME + " ON " + POSTS_TABLE_NAME + " (" + POST_GROUP_NAME + ");");
+			stat.execute("CREATE INDEX IF NOT EXISTS " + POST_SIGNER_ID_INDEX_NAME + " ON " + POSTS_TABLE_NAME + " (" + POST_SIGNER_ID_NAME + ");");
+			stat.execute("CREATE INDEX IF NOT EXISTS " + COMMENT_FROM_ID_INDEX_NAME + " ON " + COMMENTS_TABLE_NAME + " (" + COMMENT_FROM_ID_NAME + ");");
+			stat.execute("CREATE INDEX IF NOT EXISTS " + COMMENT_REPLY_INDEX_NAME + " ON " + COMMENTS_TABLE_NAME + " (" + COMMENT_REPLY_NAME + ");");
+			stat.execute("CREATE INDEX IF NOT EXISTS " + LIKES_USER_INDEX_NAME + " ON " + LIKES_TABLE_NAME + " (" + LIKES_USER_NAME + ");");
+			stat.execute("CREATE INDEX IF NOT EXISTS " + BOARD_COMMENT_GROUP_TOPIC_INDEX_NAME + " ON " + BOARD_COMMENTS_TABLE_NAME + " (" + BOARD_COMMENT_GROUP_ID_NAME + ", " + BOARD_COMMENT_TOPIC_ID_NAME + ");");
+			stat.execute("CREATE INDEX IF NOT EXISTS " + BOARD_COMMENT_FROM_ID_INDEX_NAME + " ON " + BOARD_COMMENTS_TABLE_NAME + " (" + BOARD_COMMENT_FROM_ID_NAME + ");");
 		}
 	}
 
@@ -69,6 +103,7 @@ public class DatabaseUtils {
 			stat.executeUpdate("drop table if exists " + POSTS_TABLE_NAME + ";");
 			stat.executeUpdate("drop table if exists " + COMMENTS_TABLE_NAME + ";");
 			stat.executeUpdate("drop table if exists " + LIKES_TABLE_NAME + ";");
+			stat.executeUpdate("drop table if exists " + BOARD_COMMENTS_TABLE_NAME + ";");
 			System.out.println("DB Tables deleted.");
 		}
 	}
@@ -78,20 +113,27 @@ public class DatabaseUtils {
 	}
 	
 	public static Set<Long> getPostsIdSetFromWall(long wall_id) throws SQLException {
-		Set<Long> posts = new HashSet<>();
+		Set<Long> postIds = new HashSet<>();
 		try(Statement stat = DatabaseWrapper.getInstance().getConnection().createStatement();
-			ResultSet resSet = stat.executeQuery("SELECT " + POST_ID_NAME + " FROM " + POSTS_TABLE_NAME + " WHERE " + POST_GROUP_NAME + " = " + wall_id)) {
+			ResultSet resSet = stat.executeQuery("SELECT " + POST_ID_NAME + " FROM " + POSTS_TABLE_NAME + " WHERE " + POST_GROUP_NAME + "=" + wall_id)) {
 				while (resSet.next()) {
-					long post_id = resSet.getLong(POST_ID_NAME);
-					posts.add(post_id);
+					long postId = resSet.getLong(POST_ID_NAME);
+					postIds.add(postId);
 				}
 		}
-		return posts;
+		return postIds;
 	}
 
-	public static Set<Long> getBoardCommentsIdSetFromWall(long groupId, long boardId) throws SQLException {
-		// TODO
-		return new HashSet<>();
+	public static Set<Long> getBoardCommentsIdSetFromWall(long groupId, long topicId) throws SQLException {
+		Set<Long> boardsCommentIds = new HashSet<>();
+		try(Statement stat = DatabaseWrapper.getInstance().getConnection().createStatement();
+			ResultSet resSet = stat.executeQuery("SELECT " + BOARD_COMMENT_ID_NAME + " FROM " + BOARD_COMMENTS_TABLE_NAME + " WHERE " + BOARD_COMMENT_GROUP_ID_NAME + "=" + groupId + " AND " + BOARD_COMMENT_TOPIC_ID_NAME + "=" + topicId)) {
+				while (resSet.next()) {
+					long boardCommentId = resSet.getLong(BOARD_COMMENT_ID_NAME);
+					boardsCommentIds.add(boardCommentId);
+				}
+		}
+		return boardsCommentIds;
 	}
 
 	public static List<WallPost> getPostsByPattern(String regex, Date dateRestriction) throws SQLException {
@@ -192,7 +234,41 @@ public class DatabaseUtils {
 		return likes;
 	}
 
-	public static synchronized void insertPostsWithData(List<WallPost> posts, List<WallPostComment> comments, List<WallPostLike> likes) throws SQLException {
+	public static List<BoardComment> getBoardCommentsByPattern(String regex, Date dateRestriction) throws SQLException {
+		List<BoardComment> boardComments = new ArrayList<>();
+		try(Statement stat = DatabaseWrapper.getInstance().getConnection().createStatement();
+			ResultSet resSet = stat.executeQuery("SELECT * FROM " + BOARD_COMMENTS_TABLE_NAME + " WHERE " + BOARD_COMMENT_DATE_NAME + " >= " + dateRestriction.getTime() + " AND " + BOARD_COMMENT_TEXT_NAME + " REGEXP '" + regex + "'")) {
+			while (resSet.next()) {
+				long boardCommentId = resSet.getLong(BOARD_COMMENT_ID_NAME);
+				long groupId = resSet.getLong(BOARD_COMMENT_GROUP_ID_NAME);
+				long topicId = resSet.getLong(BOARD_COMMENT_TOPIC_ID_NAME);
+				long fromId = resSet.getLong(BOARD_COMMENT_FROM_ID_NAME);
+				long date = resSet.getLong(BOARD_COMMENT_DATE_NAME);
+				String text = resSet.getString(BOARD_COMMENT_TEXT_NAME);
+				boardComments.add(new BoardComment(new Date(date), boardCommentId, groupId, topicId, fromId, text));
+			}
+		}
+		return boardComments;
+	}
+
+	public static List<BoardComment> getBoardCommentsBySigner(long user) throws SQLException {
+		List<BoardComment> boardComments = new ArrayList<>();
+		try(Statement stat = DatabaseWrapper.getInstance().getConnection().createStatement();
+			ResultSet resSet = stat.executeQuery("SELECT * FROM " + BOARD_COMMENTS_TABLE_NAME + " WHERE " + BOARD_COMMENT_FROM_ID_NAME + " = " + user)) {
+			while (resSet.next()) {
+				long boardCommentId = resSet.getLong(BOARD_COMMENT_ID_NAME);
+				long groupId = resSet.getLong(BOARD_COMMENT_GROUP_ID_NAME);
+				long topicId = resSet.getLong(BOARD_COMMENT_TOPIC_ID_NAME);
+				long fromId = resSet.getLong(BOARD_COMMENT_FROM_ID_NAME);
+				long date = resSet.getLong(BOARD_COMMENT_DATE_NAME);
+				String text = resSet.getString(BOARD_COMMENT_TEXT_NAME);
+				boardComments.add(new BoardComment(new Date(date), boardCommentId, groupId, topicId, fromId, text));
+			}
+		}
+		return boardComments;
+	}
+
+	public static void insertPostsWithData(List<WallPost> posts, List<WallPostComment> comments, List<WallPostLike> likes) throws SQLException {
 		Connection conn = DatabaseWrapper.getInstance().getConnection();
 		conn.setAutoCommit(false);
 		try {
@@ -211,7 +287,7 @@ public class DatabaseUtils {
 		}
 	}
 
-	public static synchronized void insertBoardCommentsWithData(List<BoardComment> boardComments) throws SQLException {
+	public static void insertBoardCommentsWithData(List<BoardComment> boardComments) throws SQLException {
 		Connection conn = DatabaseWrapper.getInstance().getConnection();
 		conn.setAutoCommit(false);
 		try {
@@ -227,8 +303,12 @@ public class DatabaseUtils {
 	}
 
 	private static void insertPosts(List<WallPost> wpl) throws SQLException {
-		try(PreparedStatement prep = DatabaseWrapper.getInstance().getConnection().prepareStatement("INSERT INTO " + POSTS_TABLE_NAME + " (" + POST_ID_NAME + ", "
-				+ POST_GROUP_NAME + ", " + POST_SIGNER_ID_NAME + ", " + POST_DATE_NAME + ", " + POST_TEXT_NAME
+		try(PreparedStatement prep = DatabaseWrapper.getInstance().getConnection()
+				.prepareStatement("INSERT INTO " + POSTS_TABLE_NAME + " (" + POST_ID_NAME + ", "
+				+ POST_GROUP_NAME + ", "
+				+ POST_SIGNER_ID_NAME + ", "
+				+ POST_DATE_NAME + ", "
+				+ POST_TEXT_NAME
 				+ ") VALUES (?, ?, ?, ?, ?); ")) {
 
 			for (WallPost wp : wpl) {
@@ -241,10 +321,6 @@ public class DatabaseUtils {
 			}
 			prep.executeBatch();
 		}
-	}
-
-	private static void insertBoardComments(List<BoardComment> bcl) throws SQLException {
-		// TODO
 	}
 
 	private static void insertComments(List<WallPostComment> wcl) throws SQLException {
@@ -275,6 +351,23 @@ public class DatabaseUtils {
 				prep.setLong(4, like.getOwnerId());
 				prep.setLong(5, like.getItemId());
 				prep.setLong(6, like.getDate().getTime());
+				prep.addBatch();
+			}
+			prep.executeBatch();
+		}
+	}
+
+	private static void insertBoardComments(List<BoardComment> bcl) throws SQLException {
+		try(PreparedStatement prep = DatabaseWrapper.getInstance().getConnection()
+				.prepareStatement("INSERT INTO " + BOARD_COMMENTS_TABLE_NAME + " VALUES (?, ?, ?, ?, ?, ?, ?);")) {
+
+			for (BoardComment bc : bcl) {
+				prep.setLong(2, bc.getCommentId());
+				prep.setLong(3, bc.getGroupId());
+				prep.setLong(4, bc.getTopicId());
+				prep.setLong(5, bc.getFromId());
+				prep.setLong(6, bc.getDate().getTime());
+				prep.setString(7, bc.getText());
 				prep.addBatch();
 			}
 			prep.executeBatch();

@@ -18,25 +18,27 @@ public class SearchOptions {
 
     private final Date dateRestriction;
     private final Map<Long, String> groupNames;
+    private final Map<Board, String> topicTitles;
 
-    private SearchOptions(SearchType searchType, Map<Long, User> findUsers, String findPattern, Date dateRestriction, Map<Long, String> groupNames) {
+    private SearchOptions(SearchType searchType, Map<Long, User> findUsers, String findPattern, Date dateRestriction, Map<Long, String> groupNames, Map<Board, String> topicTitles) {
         this.searchType = searchType;
         this.findUsers = findUsers;
         this.findPattern = findPattern;
         this.dateRestriction = dateRestriction;
         this.groupNames = groupNames;
+        this.topicTitles = topicTitles;
     }
 
-    public static SearchOptions of(User user, Date dateRestriction, Map<Long, String> groupNames) {
-        return new SearchOptions(SearchType.BY_ID_SINGLE, Collections.singletonMap(user.getId(), user), null, dateRestriction, groupNames);
+    public static SearchOptions of(User user, Date dateRestriction, Map<Long, String> groupNames, Map<Board, String> topicTitles) {
+        return new SearchOptions(SearchType.BY_ID_SINGLE, Collections.singletonMap(user.getId(), user), null, dateRestriction, groupNames, topicTitles);
     }
 
-    public static SearchOptions of(List<User> friends, Date dateRestriction, Map<Long, String> groupNames) {
-        return new SearchOptions(SearchType.BY_ID_MULTIPLE, friends.stream().collect(Collectors.toMap(User::getId, user -> user)), null, dateRestriction, groupNames);
+    public static SearchOptions of(List<User> friends, Date dateRestriction, Map<Long, String> groupNames, Map<Board, String> topicTitles) {
+        return new SearchOptions(SearchType.BY_ID_MULTIPLE, friends.stream().collect(Collectors.toMap(User::getId, user -> user)), null, dateRestriction, groupNames, topicTitles);
     }
 
-    public static SearchOptions of(String findPattern, Date dateRestriction, Map<Long, String> groupNames) {
-        return new SearchOptions(SearchType.BY_PATTERN, null, findPattern, dateRestriction, groupNames);
+    public static SearchOptions of(String findPattern, Date dateRestriction, Map<Long, String> groupNames, Map<Board, String> topicTitles) {
+        return new SearchOptions(SearchType.BY_PATTERN, null, findPattern, dateRestriction, groupNames, topicTitles);
     }
 
     public SearchType getSearchType() {
@@ -57,5 +59,9 @@ public class SearchOptions {
 
     public Map<Long, String> getGroupNames() {
         return groupNames;
+    }
+
+    public Map<Board, String> getTopicTitles() {
+        return topicTitles;
     }
 }

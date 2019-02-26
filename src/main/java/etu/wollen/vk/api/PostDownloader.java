@@ -2,6 +2,7 @@ package etu.wollen.vk.api;
 
 import etu.wollen.vk.database.DatabaseUtils;
 import etu.wollen.vk.model.conf.Board;
+import etu.wollen.vk.model.database.BoardComment;
 import etu.wollen.vk.model.database.WallPost;
 import etu.wollen.vk.model.database.WallPostComment;
 import etu.wollen.vk.model.database.WallPostLike;
@@ -28,6 +29,7 @@ public class PostDownloader {
 	private static final String REQUEST_GROUPS_GET_BY_ID = VK_API_URL + "groups.getById?fields=is_member&group_ids=%s&access_token=%s&v=" + VERSION;
 	private static final String REQUEST_BOARD_GET_TOPICS = VK_API_URL + "board.getTopics?group_id=%s&topic_ids=%s&access_token=%s&v=" + VERSION;
 	private static final String REQUEST_WALL_GET = VK_API_URL + "wall.get?owner_id=%s&offset=%s&count=" + GET_POSTS_COUNT + "&access_token=%s&v=" + VERSION;
+	private static final String REQUEST_BOARD_GET_COMMENTS = VK_API_URL + "board.getComments?&group_id=%s&topic_id=%s&offset=%s&count=" + GET_BOARD_COMMENTS_COUNT + "&access_token=%s&v=" + VERSION;
 	private static final String REQUEST_WALL_GET_COMMENTS = VK_API_URL + "wall.getComments?owner_id=%s&post_id=%s&offset=%s&count=" + GET_POST_COMMENTS_COUNT + "&access_token=%s&v=" + VERSION;
 	private static final String REQUEST_LIKES_GET_LIST = VK_API_URL + "likes.getList?type=post&owner_id=%s&item_id=%s&offset=%s&count=" + GET_POST_LIKES_COUNT + "&access_token=%s&v=" + VERSION;
 
@@ -47,50 +49,56 @@ public class PostDownloader {
 		return groupNames;
 	}
 
+	public Map<Board, String> getTopicTitles(){
+		return topicTitles;
+	}
+
 	public void parseGroups(final Date dateRestriction) {
 		class WallParser implements Callable<Void> {
 			private final long wallId;
 			private final String wallName;
 			private final int count;
-			private final ExecutorService executorService;
+			private final ExecutorService databaseExecutor;
+			private final ExecutorService secondaryExecutor;
 
-			private WallParser(long wallId, String wallName, int count, ExecutorService executorService) {
+			private WallParser(long wallId, String wallName, int count, ExecutorService databaseExecutor, ExecutorService secondaryExecutor) {
 				this.wallId = wallId;
 				this.wallName = wallName;
 				this.count = count;
-				this.executorService = executorService;
+				this.databaseExecutor = databaseExecutor;
+				this.secondaryExecutor = secondaryExecutor;
 			}
 
 			@Override
 			public Void call() {
-				System.out.println("Parsing vk.com/club" + wallId + " (" + wallName + ") " + count + " of "
-						+ groupNames.size());
-				getPosts(wallId * (-1), wallName, dateRestriction, executorService);
+				String title = "vk.com/club" + wallId + " (" + wallName + ")";
+				System.out.println("Parsing " + title + " " + count + " of " + groupNames.size());
+				getPosts(wallId * (-1), title, dateRestriction, databaseExecutor, secondaryExecutor);
 				return null;
 			}
 
 		}
 
 		class BoardParser implements Callable<Void> {
-			private final long wallId;
+			private final long groupId;
 			private final long topicId;
 			private final String topicTitle;
 			private final int count;
-			private final ExecutorService executorService;
+			private final ExecutorService databaseExecutor;
 
-			private BoardParser(long wallId, long topicId, String topicTitle, int count, ExecutorService executorService) {
-				this.wallId = wallId;
+			private BoardParser(long groupId, long topicId, String topicTitle, int count, ExecutorService databaseExecutor) {
+				this.groupId = groupId;
 				this.topicId = topicId;
 				this.topicTitle = topicTitle;
 				this.count = count;
-				this.executorService = executorService;
+				this.databaseExecutor = databaseExecutor;
 			}
 
 			@Override
 			public Void call() {
-				System.out.println("Parsing vk.com/topic-" + wallId + "_" + topicId + " (" + topicTitle + ") " + count + " of "
-						+ topicTitles.size());
-				/// TODO implement
+				String title = "vk.com/topic-" + groupId + "_" + topicId + " (" + topicTitle + ")";
+				System.out.println("Parsing " + title + " " + count + " of " + topicTitles.size());
+				getBoardComments(groupId, topicId, title, dateRestriction, databaseExecutor);
 				return null;
 			}
 
@@ -98,22 +106,24 @@ public class PostDownloader {
 
 		ExecutorService primaryExecutor = null;
 		ExecutorService secondaryExecutor = null;
+		ExecutorService databaseExecutor = null;
         try {
 			primaryExecutor = Executors.newFixedThreadPool(PRIMARY_THREADS);
 			secondaryExecutor = Executors.newFixedThreadPool(SECONDARY_THREADS);
+			databaseExecutor = Executors.newSingleThreadExecutor(); // TODO migrate to database with multiple connections
 			List<Callable<Void>> workers = new ArrayList<>(groupNames.entrySet().size());
 			int groupCount = 1;
 			for (Map.Entry<Long, String> group : groupNames.entrySet()) {
 				Long wallId = group.getKey();
 				String wallName = group.getValue();
-				workers.add(new WallParser(wallId, wallName, groupCount++, secondaryExecutor));
+				workers.add(new WallParser(wallId, wallName, groupCount++, databaseExecutor, secondaryExecutor));
 			}
 			int topicCount = 1;
 			for (Map.Entry<Board, String> topic : topicTitles.entrySet()) {
 				long wallId = topic.getKey().getGroupId();
 				long topicId = topic.getKey().getTopicId();
 				String topicTitle = topic.getValue();
-				workers.add(new BoardParser(wallId, topicId, topicTitle, topicCount++, secondaryExecutor));
+				workers.add(new BoardParser(wallId, topicId, topicTitle, topicCount++, databaseExecutor));
 			}
 			primaryExecutor.invokeAll(workers);
 
@@ -121,8 +131,9 @@ public class PostDownloader {
             e.printStackTrace();
         }
         finally {
-			if(primaryExecutor != null) primaryExecutor.shutdown();
-			if(secondaryExecutor != null) secondaryExecutor.shutdown();
+			if (primaryExecutor != null) primaryExecutor.shutdown();
+			if (secondaryExecutor != null) secondaryExecutor.shutdown();
+			if (databaseExecutor != null) databaseExecutor.shutdown();
 		}
 	}
 
@@ -164,18 +175,23 @@ public class PostDownloader {
 					JSONParser jp = new JSONParser();
 					JSONObject jsonResponse = (JSONObject) jp.parse(response);
 					JSONObject resp = (JSONObject) jsonResponse.get("response");
-					JSONArray items = (JSONArray) resp.get("items");
-					for (Object oitem : items) {
-						JSONObject item = (JSONObject) oitem;
-						long id = (long) item.get("id");
-						String title = (String) item.get("title");
-						long isClosed = (long) item.get("is_closed");
-						if (id == board.getTopicId()) {
-							if (isClosed == 0 || privateGroupsEnabled) {
-								topicTitles.put(board, title);
-							}
-							else {
-								System.out.println("Closed topic: " + title + "[" + board.getTopicId() + "]" + " (" + board.toString() + ")");
+					if (resp == null) {
+						// TODO manage topics in closed groups
+						System.out.println("Closed topic: (" + board.toString() + ")");
+					}
+					else {
+						JSONArray items = (JSONArray) resp.get("items");
+						for (Object oitem : items) {
+							JSONObject item = (JSONObject) oitem;
+							long id = (long) item.get("id");
+							String title = (String) item.get("title");
+							long isClosed = (long) item.get("is_closed");
+							if (id == board.getTopicId()) {
+								if (isClosed == 0 || privateGroupsEnabled) {
+									topicTitles.put(board, title);
+								} else {
+									System.out.println("Closed topic: " + title + "[" + board.getTopicId() + "]" + " (" + board.toString() + ")");
+								}
 							}
 						}
 					}
@@ -187,12 +203,12 @@ public class PostDownloader {
 		}
 	}
 
-	private void getPosts(long wallId, String wallName, Date dateRestriction, ExecutorService secondaryExecutor) {
+	private void getPosts(final long wallId, final String title, final Date dateRestriction,
+						  final ExecutorService databaseExecutor, final ExecutorService secondaryExecutor) {
+
 		long offset = 0;
-		ExecutorService databaseExecutor = null;
 		Future<?> currentDatabaseTask = null;
 		try {
-			databaseExecutor = Executors.newSingleThreadExecutor();
 			Set<Long> allWallSet = DatabaseUtils.getPostsIdSetFromWall(wallId);
 			boolean readFinished = false;
 			while (!readFinished) {
@@ -236,7 +252,7 @@ public class PostDownloader {
 
 					if (wp.getDate().getTime() < dateRestriction.getTime()) {
 					    if (!readFinished) {
-                            System.out.println("Date restriction in " + wallId);
+                            System.out.println("Date restriction in " + title);
                             readFinished = true;
                         }
                     }
@@ -300,32 +316,102 @@ public class PostDownloader {
 			}
 
 			if (currentDatabaseTask != null) {
-				System.out.println("All posts in " + wallId + " ("+wallName+") have been parsed");
+				currentDatabaseTask.get();
+				System.out.println("All posts in " + title + " have been parsed");
 			}
 			else {
-				System.out.println("No new posts in " + wallId + " ("+wallName+")");
+				System.out.println("No new posts in " + title);
 			}
 		}
 		catch (Exception e) {
 			e.printStackTrace();
-			System.err.println("ERROR: Wall " + wallId + " ("+wallName+") has not been parsed");
-		}
-		finally {
-			if(databaseExecutor != null) {
-				// wait until the latest database task is finished if exists
-				if (currentDatabaseTask != null) {
-					try {
-						currentDatabaseTask.get();
-					} catch (InterruptedException | ExecutionException e) {
-						e.printStackTrace();
-					}
-				}
-				databaseExecutor.shutdown();
-			}
+			System.err.println("ERROR: Wall " + title +" has not been parsed");
 		}
 	}
 
-	private List<WallPostComment> getPostComments(long wallId, long postId) throws Exception {
+	private void getBoardComments(final long groupId, final long topicId, final String title, final Date dateRestriction,
+								  final ExecutorService databaseExecutor) {
+		long offset = 0;
+		Future<?> currentDatabaseTask = null;
+		try {
+			Set<Long> allBoardSet = DatabaseUtils.getBoardCommentsIdSetFromWall(groupId, topicId);
+			boolean readFinished = false;
+			while (!readFinished) {
+				final List<BoardComment> commentsToCommit = new ArrayList<>();
+				String request = String.format(REQUEST_BOARD_GET_COMMENTS, groupId, topicId, offset, accessToken);
+				String response = HttpClient.getInstance().httpGet(request);
+				offset += GET_BOARD_COMMENTS_COUNT;
+
+				JSONParser jp = new JSONParser();
+				JSONObject jsonResponse = (JSONObject) jp.parse(response);
+				JSONObject resp = (JSONObject) jsonResponse.get("response");
+				if (resp == null) {
+					JSONObject error = (JSONObject) jsonResponse.get("error");
+					throw new Exception(error.toJSONString());
+				}
+				Object commentsCountObject = resp.get("count");
+				long commentsCount = commentsCountObject == null ? 0 : (long) commentsCountObject;
+				JSONArray items = (JSONArray) resp.get("items");
+				if (items.size() == 0) {
+					readFinished = true;
+				}
+
+				for (Object oitem : items) {
+					JSONObject item = (JSONObject) oitem;
+
+					long date = (long) item.get("date");
+					long commentId = (long) item.get("id");
+					long fromId = (long) item.get("from_id");
+					String text = (String) item.get("text");
+					BoardComment bc = new BoardComment(new Date(date * 1000), commentId, groupId, topicId, fromId, text);
+
+					if (bc.getDate().getTime() < dateRestriction.getTime()) {
+						if (!readFinished) {
+							System.out.println("Date restriction in " + title);
+							readFinished = true;
+						}
+					}
+					else if (!allBoardSet.contains(commentId)) {
+						allBoardSet.add(bc.getCommentId());
+						commentsToCommit.add(bc);
+					}
+				}
+
+				if (commentsToCommit.isEmpty() && allBoardSet.size() >= commentsCount) {
+				    /* TODO bug: some new comments can be lost
+				        in case of some old comments were stored in database
+				        but deleted from the board in vk
+				     */
+					readFinished = true;
+				}
+				else if (commentsToCommit.size() > 0) {
+					// wait until the previous database task is finished
+					if(currentDatabaseTask != null){
+						currentDatabaseTask.get();
+					}
+					// write to database
+					currentDatabaseTask = databaseExecutor.submit((Callable<Void>) () -> {
+						DatabaseUtils.insertBoardCommentsWithData(commentsToCommit);
+						return null;
+					});
+				}
+			}
+
+			if (currentDatabaseTask != null) {
+				currentDatabaseTask.get();
+				System.out.println("All comments in " + title +" have been parsed");
+			}
+			else {
+				System.out.println("No new comments in " + title);
+			}
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			System.err.println("ERROR: Board " + title + " has not been parsed");
+		}
+	}
+
+	private List<WallPostComment> getPostComments(final long wallId, final long postId) throws Exception {
 		final List<WallPostComment> comments = new ArrayList<>();
 		long offset = 0;
 		long commentsRead = 0;
@@ -383,7 +469,7 @@ public class PostDownloader {
 		return comments;
 	}
 
-	private List<WallPostLike> getPostLikes(long wallId, long postId, Date date) throws Exception {
+	private List<WallPostLike> getPostLikes(final long wallId, final long postId, final Date date) throws Exception {
 		final List<WallPostLike> likes = new ArrayList<>();
 		long offset = 0;
 		long likesRead = 0;

@@ -7,6 +7,7 @@ import etu.wollen.vk.conf.ConfigParser;
 import etu.wollen.vk.database.DatabaseUtils;
 import etu.wollen.vk.database.DatabaseWrapper;
 import etu.wollen.vk.exceptions.ConfigParseException;
+import etu.wollen.vk.model.conf.Board;
 import etu.wollen.vk.model.conf.SearchOptions;
 import etu.wollen.vk.model.conf.User;
 import etu.wollen.vk.model.database.*;
@@ -30,6 +31,7 @@ public class PostSearcher {
 		boolean friendsEnabled = getFlag(args, "-friends");
 		boolean debugEnabled = getFlag(args, "-debug");
 		boolean privateGroupsEnabled = getFlag(args, "-private");
+		boolean dropDatabase = getFlag(args, "-drop");
 		String sqliteDatabase = getParameter(args, "-sqlite:");
 		if (sqliteDatabase == null || sqliteDatabase.isEmpty() || !sqliteDatabase.endsWith(".s3db")) {
 			System.out.println("Missing argument -sqlite:{filename}.s3db");
@@ -39,6 +41,7 @@ public class PostSearcher {
 		try {
 			// connect and create DB
 			DatabaseWrapper.getInstance().setDatabaseFilename(sqliteDatabase);
+			if (dropDatabase) DatabaseUtils.deleteDB();
 			DatabaseUtils.createDB();
 
 			// parse config from initial file
@@ -72,9 +75,10 @@ public class PostSearcher {
 			System.out.println("Start searching...  after date: " + config.getDateRestriction());
 			Date dateRestriction = config.getDateRestriction();
 			Map<Long, String> groupNames = pd.getGroupNames();
+			Map<Board, String> topicTitles = pd.getTopicTitles();
 			SearchOptions searchOptions = config.isById()
-					? SearchOptions.of(config.getFindUser(), dateRestriction, groupNames)
-					: SearchOptions.of(config.getFindPattern(), dateRestriction, groupNames);
+					? SearchOptions.of(config.getFindUser(), dateRestriction, groupNames, topicTitles)
+					: SearchOptions.of(config.getFindPattern(), dateRestriction, groupNames, topicTitles);
 
 			findData(searchOptions, "output");
 
@@ -85,7 +89,7 @@ public class PostSearcher {
 					List<User> friendsList = new UserDownloader(config.getAccessToken()).getFriends(config.getFindUser());
 					System.out.println("Found " + friendsList.size() + " friends");
 					if (friendsList.size() > 0) {
-						findData(SearchOptions.of(friendsList, dateRestriction, groupNames), "output_friends");
+						findData(SearchOptions.of(friendsList, dateRestriction, groupNames, topicTitles), "output_friends");
 					}
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -134,7 +138,7 @@ public class PostSearcher {
 			for(User user: so.getFindUsers().values()){
 				posts.addAll(findPostsBySigner(user.getId(), so.getGroupNames().keySet(), so.getDateRestriction()));
 				comments.addAll(findCommentsBySigner(user.getId(), so.getGroupNames().keySet(), so.getDateRestriction()));
-				// TODO boardComments
+				boardComments.addAll(findBoardCommentsBySigner(user.getId(), so.getTopicTitles().keySet(), so.getDateRestriction()));
 				answers.addAll(findCommentsByReply(user.getId(), so.getGroupNames().keySet(), so.getDateRestriction()));
 				likes.addAll(findLikesByUser(user.getId(), so.getGroupNames().keySet(), so.getDateRestriction()));
 			}
@@ -143,7 +147,7 @@ public class PostSearcher {
 		else {
 			posts = findPostsByPattern(so.getFindPattern(), so.getGroupNames().keySet(), so.getDateRestriction());
 			comments = findCommentsByPattern(so.getFindPattern(), so.getGroupNames().keySet(), so.getDateRestriction());
-			// TODO boardComments
+			boardComments = findBoardCommentsByPattern(so.getFindPattern(), so.getTopicTitles().keySet(), so.getDateRestriction());
 			answers = new ArrayList<>();
 			likes = new ArrayList<>();
 		}
@@ -171,6 +175,14 @@ public class PostSearcher {
 				.collect(Collectors.toList());
 	}
 
+	private static List<WallPost> findPostsByPattern(String regex, Set<Long> allowedGroups, Date dateRestriction) throws SQLException {
+		List<WallPost> wallPosts = DatabaseUtils.getPostsByPattern(regex, dateRestriction);
+		return wallPosts
+				.stream()
+				.filter(a -> allowedGroups.contains(a.getGroupId() * (-1)))
+				.collect(Collectors.toList());
+	}
+
 	private static List<WallPostComment> findCommentsBySigner(long user, Set<Long> allowedGroups, Date dateRestriction) throws SQLException {
 		List<WallPostComment> wallPostComments = DatabaseUtils.getCommentsBySigner(user);
 		return wallPostComments
@@ -195,19 +207,27 @@ public class PostSearcher {
 				.collect(Collectors.toList());
 	}
 
-	private static List<WallPost> findPostsByPattern(String regex, Set<Long> allowedGroups, Date dateRestriction) throws SQLException {
-		List<WallPost> wallPosts = DatabaseUtils.getPostsByPattern(regex, dateRestriction);
-		return wallPosts
-				.stream()
-				.filter(a -> allowedGroups.contains(a.getGroupId() * (-1)))
-				.collect(Collectors.toList());
-	}
-
 	private static List<WallPostComment> findCommentsByPattern(String regex, Set<Long> allowedGroups, Date dateRestriction) throws SQLException {
 		List<WallPostComment> wallPostComments = DatabaseUtils.getCommentsByPattern(regex, dateRestriction);
 		return wallPostComments
 				.stream()
 				.filter(a -> allowedGroups.contains(a.getGroupId() * (-1)))
+				.collect(Collectors.toList());
+	}
+
+	private static List<BoardComment> findBoardCommentsBySigner(long user, Set<Board> allowedBoards, Date dateRestriction) throws SQLException {
+		List<BoardComment> boardComments = DatabaseUtils.getBoardCommentsBySigner(user);
+		return boardComments
+				.stream()
+				.filter(a -> allowedBoards.contains(new Board(a.getGroupId(), a.getTopicId())) && !a.getDate().before(dateRestriction))
+				.collect(Collectors.toList());
+	}
+
+	private static List<BoardComment> findBoardCommentsByPattern(String regex, Set<Board> allowedBoards, Date dateRestriction) throws SQLException {
+		List<BoardComment> boardComments = DatabaseUtils.getBoardCommentsByPattern(regex, dateRestriction);
+		return boardComments
+				.stream()
+				.filter(a -> allowedBoards.contains(new Board(a.getGroupId(), a.getTopicId())))
 				.collect(Collectors.toList());
 	}
 }

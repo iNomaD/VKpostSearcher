@@ -1,5 +1,6 @@
 package etu.wollen.vk.utils;
 
+import etu.wollen.vk.model.conf.Board;
 import etu.wollen.vk.model.conf.SearchOptions;
 import etu.wollen.vk.model.conf.User;
 import etu.wollen.vk.model.database.*;
@@ -32,7 +33,7 @@ public class PrintUtils {
                     break;
                 case BY_ID_MULTIPLE:
                     StringBuilder users = new StringBuilder();
-                    for(User friend : usersMap.values()){
+                    for (User friend : usersMap.values()){
                         users.append(friend).append(", ");
                     }
                     System.out.println("Users: " + users + LINE_SEPARATOR);
@@ -55,7 +56,6 @@ public class PrintUtils {
                     String name = group.getValue();
                     List<WallPost> selectedPosts = posts.stream().filter(post -> post.getGroupId() == groupId).collect(Collectors.toList());
                     List<WallPostComment> selectedComments = comments.stream().filter(comment -> comment.getGroupId() == groupId).collect(Collectors.toList());
-                    List<BoardComment> selectedBoardComments = boardComments.stream().filter(comment -> comment.getGroupId() == groupId).collect(Collectors.toList());
                     List<WallPostComment> selectedAnswers = answers.stream().filter(comment -> comment.getGroupId() == groupId).collect(Collectors.toList());
                     List<WallPostLike> selectedLikes = likes.stream().filter(like -> like.getOwnerId() == groupId).collect(Collectors.toList());
 
@@ -63,12 +63,21 @@ public class PrintUtils {
                         System.out.println("<<< " + name + " >>>");
                         printItems(selectedPosts, searchType, a -> usersMap.get(((WallPost)a).getSignerId()));
                         printItems(selectedComments, searchType, a -> usersMap.get(((WallPostComment)a).getFromId()));
-                        printItems(selectedBoardComments, searchType, a -> usersMap.get(((BoardComment)a).getFromId()));
                         if (so.getSearchType() != SearchOptions.SearchType.BY_PATTERN) {
                             printItems(selectedAnswers, searchType, a -> usersMap.get(((WallPostComment)a).getReplyToUser()));
                             printItems(selectedLikes, searchType, a -> usersMap.get(((WallPostLike)a).getUser()));
                         }
                         System.out.println(LINE_SEPARATOR + LINE_SEPARATOR);
+                    }
+                }
+                for (Map.Entry<Board, String> boardEntry : so.getTopicTitles().entrySet()) {
+                    Board board = boardEntry.getKey();
+                    String name = boardEntry.getValue();
+                    List<BoardComment> selectedBoardComments = boardComments.stream().filter(comment -> comment.getGroupId() == board.getGroupId() && comment.getTopicId() == board.getTopicId()).collect(Collectors.toList());
+
+                    if (!selectedBoardComments.isEmpty()) {
+                        System.out.println("<<< " + name + " >>>");
+                        printItems(selectedBoardComments, searchType, a -> usersMap.get(((BoardComment) a).getFromId()));
                     }
                 }
             } else {

@@ -9,12 +9,12 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class ConfigParser {
+
+    private static final String SYMBOL_COMMENT = "#";
 
     public Config parseFileGroups(String filename) throws ConfigParseException {
         /// TODO migrate properties to conf.properties file
@@ -22,17 +22,22 @@ public class ConfigParser {
         try (BufferedReader br = new BufferedReader(new InputStreamReader(
                         new FileInputStream(filename), StandardCharsets.UTF_8))) {
 
-            String searchExpression = br.readLine();
-            String dateExpression = br.readLine();
-            String accessToken = br.readLine();
-            String primaryThreads = br.readLine();
-            String secondaryThreads = br.readLine();
+            Iterator<String> linesIterator = br.lines()
+                    .filter(line -> !line.isEmpty() && !line.trim().startsWith(SYMBOL_COMMENT))
+                    .collect(Collectors.toList())
+                    .iterator();
+
+            String searchExpression = linesIterator.next();
+            String dateExpression = linesIterator.next();
+            String accessToken = linesIterator.next();
+            String primaryThreads = linesIterator.next();
+            String secondaryThreads = linesIterator.next();
 
             List<String> groupList = new ArrayList<>();
             List<Board> boardList = new ArrayList<>();
-            String line;
-            while ((line = br.readLine()) != null) {
-                if (!line.isEmpty() && line.contains("vk.com/")) {
+            while (linesIterator.hasNext()) {
+                String line = linesIterator.next();
+                if (line.contains("vk.com/")) {
                     line = line.replaceAll(".*/", "");
 
                     String[] topicParts = null;

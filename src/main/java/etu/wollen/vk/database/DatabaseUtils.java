@@ -278,11 +278,11 @@ public class DatabaseUtils {
 				insertComments(comments);
 			if(!likes.isEmpty())
 				insertLikes(likes);
+			conn.commit();
 		} catch (SQLException e) {
 			conn.rollback();
 			throw e;
 		} finally {
-			conn.commit();
 			conn.setAutoCommit(true);
 		}
 	}
@@ -293,23 +293,24 @@ public class DatabaseUtils {
 		try {
 			if(!boardComments.isEmpty())
 				insertBoardComments(boardComments);
+			conn.commit();
 		} catch (SQLException e) {
 			conn.rollback();
 			throw e;
 		} finally {
-			conn.commit();
 			conn.setAutoCommit(true);
 		}
 	}
 
 	private static void insertPosts(List<WallPost> wpl) throws SQLException {
 		try(PreparedStatement prep = DatabaseWrapper.getInstance().getConnection()
-				.prepareStatement("INSERT INTO " + POSTS_TABLE_NAME + " (" + POST_ID_NAME + ", "
-				+ POST_GROUP_NAME + ", "
-				+ POST_SIGNER_ID_NAME + ", "
-				+ POST_DATE_NAME + ", "
-				+ POST_TEXT_NAME
-				+ ") VALUES (?, ?, ?, ?, ?); ")) {
+				.prepareStatement("INSERT INTO " + POSTS_TABLE_NAME
+						+ "(" + POST_ID_NAME + ", "
+						+ POST_GROUP_NAME + ", "
+						+ POST_SIGNER_ID_NAME + ", "
+						+ POST_DATE_NAME + ", "
+						+ POST_TEXT_NAME + ")"
+						+ " VALUES (?, ?, ?, ?, ?);")) {
 
 			for (WallPost wp : wpl) {
 				prep.setLong(1, wp.getPostId());
@@ -325,16 +326,24 @@ public class DatabaseUtils {
 
 	private static void insertComments(List<WallPostComment> wcl) throws SQLException {
 		try(PreparedStatement prep = DatabaseWrapper.getInstance().getConnection()
-				.prepareStatement("INSERT INTO " + COMMENTS_TABLE_NAME + " VALUES (?, ?, ?, ?, ?, ?, ?, ?);")) {
+				.prepareStatement("INSERT INTO " + COMMENTS_TABLE_NAME
+						+ "(" + COMMENT_ID_NAME + ", "
+						+ COMMENT_FROM_ID_NAME + ", "
+						+ COMMENT_DATE_NAME + ", "
+						+ COMMENT_TEXT_NAME + ", "
+						+ COMMENT_GROUP_ID_NAME + ", "
+						+ COMMENT_POST_ID_NAME + ", "
+						+ COMMENT_REPLY_NAME + ")"
+						+ " VALUES (?, ?, ?, ?, ?, ?, ?);")) {
 
 			for (WallPostComment wc : wcl) {
-				prep.setLong(2, wc.getCommentId());
-				prep.setLong(3, wc.getFromId());
-				prep.setLong(4, wc.getDate().getTime());
-				prep.setString(5, wc.getText());
-				prep.setLong(6, wc.getGroupId());
-				prep.setLong(7, wc.getPostId());
-				prep.setLong(8, wc.getReplyToUser());
+				prep.setLong(1, wc.getCommentId());
+				prep.setLong(2, wc.getFromId());
+				prep.setLong(3, wc.getDate().getTime());
+				prep.setString(4, wc.getText());
+				prep.setLong(5, wc.getGroupId());
+				prep.setLong(6, wc.getPostId());
+				prep.setLong(7, wc.getReplyToUser());
 				prep.addBatch();
 			}
 			prep.executeBatch();
@@ -343,14 +352,20 @@ public class DatabaseUtils {
 
 	private static void insertLikes(List<WallPostLike> lkl) throws SQLException {
 		try(PreparedStatement prep = DatabaseWrapper.getInstance().getConnection()
-				.prepareStatement("INSERT INTO " + LIKES_TABLE_NAME + " VALUES (?, ?, ?, ?, ?, ?);")) {
+				.prepareStatement("INSERT INTO " + LIKES_TABLE_NAME
+						+ "(" + LIKES_USER_NAME + ", "
+						+ LIKES_TYPE_NAME + ", "
+						+ LIKES_OWNER_NAME + ", "
+						+ LIKES_ITEM_NAME + ", "
+						+ LIKES_DATE_NAME + ")"
+						+ " VALUES (?, ?, ?, ?, ?);")) {
 
 			for (WallPostLike like : lkl) {
-				prep.setLong(2, like.getUser());
-				prep.setString(3, like.getType());
-				prep.setLong(4, like.getOwnerId());
-				prep.setLong(5, like.getItemId());
-				prep.setLong(6, like.getDate().getTime());
+				prep.setLong(1, like.getUser());
+				prep.setString(2, like.getType());
+				prep.setLong(3, like.getOwnerId());
+				prep.setLong(4, like.getItemId());
+				prep.setLong(5, like.getDate().getTime());
 				prep.addBatch();
 			}
 			prep.executeBatch();
@@ -359,15 +374,22 @@ public class DatabaseUtils {
 
 	private static void insertBoardComments(List<BoardComment> bcl) throws SQLException {
 		try(PreparedStatement prep = DatabaseWrapper.getInstance().getConnection()
-				.prepareStatement("INSERT INTO " + BOARD_COMMENTS_TABLE_NAME + " VALUES (?, ?, ?, ?, ?, ?, ?);")) {
+				.prepareStatement("INSERT INTO " + BOARD_COMMENTS_TABLE_NAME
+						+ "(" + BOARD_COMMENT_ID_NAME + ", "
+						+ BOARD_COMMENT_GROUP_ID_NAME + ", "
+						+ BOARD_COMMENT_TOPIC_ID_NAME + ", "
+						+ BOARD_COMMENT_FROM_ID_NAME + ", "
+						+ BOARD_COMMENT_DATE_NAME + ", "
+						+ BOARD_COMMENT_TEXT_NAME + ")"
+						+ " VALUES (?, ?, ?, ?, ?, ?);")) {
 
 			for (BoardComment bc : bcl) {
-				prep.setLong(2, bc.getCommentId());
-				prep.setLong(3, bc.getGroupId());
-				prep.setLong(4, bc.getTopicId());
-				prep.setLong(5, bc.getFromId());
-				prep.setLong(6, bc.getDate().getTime());
-				prep.setString(7, bc.getText());
+				prep.setLong(1, bc.getCommentId());
+				prep.setLong(2, bc.getGroupId());
+				prep.setLong(3, bc.getTopicId());
+				prep.setLong(4, bc.getFromId());
+				prep.setLong(5, bc.getDate().getTime());
+				prep.setString(6, bc.getText());
 				prep.addBatch();
 			}
 			prep.executeBatch();

@@ -1,6 +1,7 @@
 package etu.wollen.vk.api;
 
 import etu.wollen.vk.database.DatabaseUtils;
+import etu.wollen.vk.exceptions.ApiError;
 import etu.wollen.vk.model.conf.Board;
 import etu.wollen.vk.model.database.BoardComment;
 import etu.wollen.vk.model.database.WallPost;
@@ -12,7 +13,10 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static etu.wollen.vk.conf.Config.*;
@@ -151,13 +155,19 @@ public class PostDownloader {
 					long gid = (long) item.get("id");
 					String name = (String) item.get("name");
 					long isClosed = (long) item.get("is_closed");
-					//long isMember = (long) item.get("is_member");
                     String screen_name = (String) item.get("screen_name");
-					if(isClosed == 0 || privateGroupsEnabled){
+					String groupDescription = screen_name + "[" + gid + "]" + " (" + name + ")";
+
+                    Object isDeactivated = item.get("deactivated");
+					Object isMember = item.get("is_member");
+					if (isDeactivated != null) {
+						System.out.println("Deactivated (" + isDeactivated + ") group: " + groupDescription);
+					} else if (isClosed != 0 && !privateGroupsEnabled) {
+						System.out.println("Closed group: " + groupDescription);
+					} else if (isClosed != 0 && isMember != null && (long) isMember == 0) {
+						System.out.println("Not member of private group: " + groupDescription);
+					} else {
 						groupNames.put(gid, name);
-					}
-					else{
-						System.out.println("Closed group: " + screen_name + "[" + gid + "]" + " (" + name + ")");
 					}
 				}
 			} catch (Exception e) {
@@ -224,9 +234,11 @@ public class PostDownloader {
 				JSONParser jp = new JSONParser();
 				JSONObject jsonResponse = (JSONObject) jp.parse(response);
 				JSONObject resp = (JSONObject) jsonResponse.get("response");
-				if (resp == null) {
-				    JSONObject error = (JSONObject) jsonResponse.get("error");
-				    throw new Exception(error.toJSONString());
+                JSONObject error = (JSONObject) jsonResponse.get("error");
+                if (error != null) {
+                    Object errorCode = error.get("error_code");
+                    Object errorMsg = error.get("error_msg");
+					throw new ApiError(errorMsg + " (" + errorCode + ")");
                 }
                 Object postsCountObject = resp.get("count");
 				long postsCount = postsCountObject == null ? 0 : (long) postsCountObject;
@@ -323,9 +335,12 @@ public class PostDownloader {
 				System.out.println("No new posts in " + title);
 			}
 		}
+		catch (ApiError e) {
+            System.err.println("ERROR. Wall " + title +" has not been parsed: " + e.getMessage());
+        }
 		catch (Exception e) {
 			e.printStackTrace();
-			System.err.println("ERROR: Wall " + title +" has not been parsed");
+			System.err.println("ERROR. Wall " + title +" has not been parsed");
 		}
 	}
 
@@ -345,10 +360,12 @@ public class PostDownloader {
 				JSONParser jp = new JSONParser();
 				JSONObject jsonResponse = (JSONObject) jp.parse(response);
 				JSONObject resp = (JSONObject) jsonResponse.get("response");
-				if (resp == null) {
-					JSONObject error = (JSONObject) jsonResponse.get("error");
-					throw new Exception(error.toJSONString());
-				}
+                JSONObject error = (JSONObject) jsonResponse.get("error");
+                if (error != null) {
+                    Object errorCode = error.get("error_code");
+                    Object errorMsg = error.get("error_msg");
+                    throw new ApiError(errorMsg + " (" + errorCode + ")");
+                }
 				Object commentsCountObject = resp.get("count");
 				long commentsCount = commentsCountObject == null ? 0 : (long) commentsCountObject;
 				JSONArray items = (JSONArray) resp.get("items");
@@ -405,6 +422,9 @@ public class PostDownloader {
 				System.out.println("No new comments in " + title);
 			}
 		}
+        catch (ApiError e) {
+            System.err.println("ERROR. Board " + title +" has not been parsed: " + e.getMessage());
+        }
 		catch (Exception e) {
 			e.printStackTrace();
 			System.err.println("ERROR: Board " + title + " has not been parsed");
@@ -427,9 +447,15 @@ public class PostDownloader {
 					JSONParser jp = new JSONParser();
 					JSONObject jsonResponse = (JSONObject) jp.parse(response);
 					JSONObject resp = (JSONObject) jsonResponse.get("response");
-					if(resp == null){
-						JSONObject error = (JSONObject) jsonResponse.get("error");
-						throw new NullPointerException(error.toJSONString());
+					JSONObject error = (JSONObject) jsonResponse.get("error");
+					if (error != null) {
+						Object errorCode = error.get("error_code");
+						Object errorMsg = error.get("error_msg");
+						if (errorCode != null && errorMsg != null && (long)errorCode == 15) {
+							System.err.println("Failed to download comments from wallId=" + wallId + ", postId=" + postId + ", error=" + errorMsg);
+							break;
+						}
+						throw new ApiError(errorMsg + " (" + errorCode + ")");
 					}
 					Object commentsCountObject = resp.get("count");
 					long commentsCount = commentsCountObject == null ? 0 : (long) commentsCountObject;
@@ -452,7 +478,7 @@ public class PostDownloader {
 					}
 					offset += GET_POST_COMMENTS_COUNT;
 					break;
-				} catch (NullPointerException e) {
+				} catch (ApiError e) {
 					if (i < GET_POST_COMMENTS_MAX_ATTEMPTS - 1) {
 						System.out.println("Can't get comments from http://vk.com/wall" + wallId + "_" + postId
 								+ "... " + (GET_POST_COMMENTS_MAX_ATTEMPTS - i - 1) + " more attempts...");
@@ -483,11 +509,17 @@ public class PostDownloader {
 					response = HttpClient.getInstance().httpGet(request);
 
 					JSONParser jp = new JSONParser();
-					JSONObject jsonresponse = (JSONObject) jp.parse(response);
-					JSONObject resp = (JSONObject) jsonresponse.get("response");
-					if(resp == null){
-						JSONObject error = (JSONObject) jsonresponse.get("error");
-						throw new NullPointerException(error.toJSONString());
+					JSONObject jsonResponse = (JSONObject) jp.parse(response);
+					JSONObject resp = (JSONObject) jsonResponse.get("response");
+					JSONObject error = (JSONObject) jsonResponse.get("error");
+					if (error != null) {
+						Object errorCode = error.get("error_code");
+						Object errorMsg = error.get("error_msg");
+						if (errorCode != null && errorMsg != null && (long)errorCode == 15) {
+							System.err.println("Failed to download likes from wallId=" + wallId + ", postId=" + postId + ", error=" + errorMsg);
+							break;
+						}
+						throw new ApiError(errorMsg + " (" + errorCode + ")");
 					}
 					Object likesCountObject = resp.get("count");
 					long likesCount = likesCountObject == null ? 0 : (long) likesCountObject;
@@ -503,7 +535,7 @@ public class PostDownloader {
 					}
 					offset += GET_POST_LIKES_COUNT;
 					break;
-				} catch (NullPointerException e) {
+				} catch (ApiError e) {
 					if (i < GET_POST_LIKES_MAX_ATTEMPTS - 1) {
 						System.out.println("Can't get likes from http://vk.com/wall" + wallId + "_" + postId
 								+ "... " + (GET_POST_LIKES_MAX_ATTEMPTS - i - 1) + " more attempts...");

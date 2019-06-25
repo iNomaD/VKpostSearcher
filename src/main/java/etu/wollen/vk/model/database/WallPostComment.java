@@ -24,7 +24,7 @@ public class WallPostComment extends BaseSearchableEntity {
 		this.replyToUser = replyToUser;
 	}
 	
-	public String getPostUrl(){
+	private String getPostUrl(){
 		return "http://vk.com/wall"+ groupId +"_"+ postId;
 	}
 
@@ -32,48 +32,24 @@ public class WallPostComment extends BaseSearchableEntity {
 		return fromId;
 	}
 
-	public void setFromId(long fromId) {
-		this.fromId = fromId;
-	}
-
 	public long getCommentId() {
 		return commentId;
-	}
-
-	public void setCommentId(long commentId) {
-		this.commentId = commentId;
 	}
 
 	public String getText() {
 		return text;
 	}
 
-	public void setText(String text) {
-		this.text = text;
-	}
-
 	public long getGroupId() {
 		return groupId;
-	}
-
-	public void setGroupId(long groupId) {
-		this.groupId = groupId;
 	}
 
 	public long getPostId() {
 		return postId;
 	}
-
-	public void setPostId(long postId) {
-		this.postId = postId;
-	}
 	
 	public long getReplyToUser() {
 		return replyToUser;
-	}
-
-	public void setReplyToUser(long replyToUser) {
-		this.replyToUser = replyToUser;
 	}
 
 	@Override

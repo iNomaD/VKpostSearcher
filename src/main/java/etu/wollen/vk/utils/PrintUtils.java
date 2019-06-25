@@ -3,11 +3,16 @@ package etu.wollen.vk.utils;
 import etu.wollen.vk.model.conf.Board;
 import etu.wollen.vk.model.conf.SearchOptions;
 import etu.wollen.vk.model.conf.User;
-import etu.wollen.vk.model.database.*;
+import etu.wollen.vk.model.database.BaseSearchableEntity;
+import etu.wollen.vk.model.database.BoardComment;
+import etu.wollen.vk.model.database.WallPost;
+import etu.wollen.vk.model.database.WallPostComment;
+import etu.wollen.vk.model.database.WallPostLike;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -16,6 +21,7 @@ import java.util.stream.Collectors;
 public class PrintUtils {
 
     private static final String LINE_SEPARATOR = System.lineSeparator();
+    private static final String ENCODING_UTF8 = "UTF-8";
 
     public static void printToFile(SearchOptions so, boolean cluster, List<WallPost> posts, List<WallPostComment> comments,
                                    List<BoardComment> boardComments, List<WallPostComment> answers, List<WallPostLike> likes,
@@ -23,33 +29,30 @@ public class PrintUtils {
 
         Map<Long, User> usersMap = so.getFindUsers();
         SearchOptions.SearchType searchType = so.getSearchType();
-        PrintStream standard = System.out;
-        try (PrintStream st = new PrintStream(new FileOutputStream(outputFileName))) {
-            System.setOut(st);
-
+        try (PrintStream out = new PrintStream(new FileOutputStream(outputFileName), true, ENCODING_UTF8)) {
             switch (searchType){
                 case BY_ID_SINGLE:
-                    System.out.println("User: " + usersMap.values().iterator().next() + LINE_SEPARATOR);
+                    out.println("User: " + usersMap.values().iterator().next() + LINE_SEPARATOR);
                     break;
                 case BY_ID_MULTIPLE:
                     StringBuilder users = new StringBuilder();
                     for (User friend : usersMap.values()){
                         users.append(friend).append(", ");
                     }
-                    System.out.println("Users: " + users + LINE_SEPARATOR);
+                    out.println("Users: " + users + LINE_SEPARATOR);
                     break;
                 case BY_PATTERN:
-                    System.out.println("Pattern: [" + so.getFindPattern() + "]" + LINE_SEPARATOR);
+                    out.println("Pattern: [" + so.getFindPattern() + "]" + LINE_SEPARATOR);
                     break;
             }
 
             if (cluster) {
-                System.out.println(posts.size() + " posts found!" + LINE_SEPARATOR);
-                System.out.println(comments.size() + " comments found!" + LINE_SEPARATOR);
-                System.out.println(boardComments.size() + " board comments found!" + LINE_SEPARATOR);
+                out.println(posts.size() + " posts found!" + LINE_SEPARATOR);
+                out.println(comments.size() + " comments found!" + LINE_SEPARATOR);
+                out.println(boardComments.size() + " board comments found!" + LINE_SEPARATOR);
                 if (so.getSearchType() != SearchOptions.SearchType.BY_PATTERN) {
-                    System.out.println(answers.size() + " answers found!" + LINE_SEPARATOR);
-                    System.out.println(likes.size() + " post likes found!" + LINE_SEPARATOR);
+                    out.println(answers.size() + " answers found!" + LINE_SEPARATOR);
+                    out.println(likes.size() + " post likes found!" + LINE_SEPARATOR);
                 }
                 for (Map.Entry<Long, String> group : so.getGroupNames().entrySet()) {
                     long groupId = -group.getKey(); // group value without minus here
@@ -60,14 +63,14 @@ public class PrintUtils {
                     List<WallPostLike> selectedLikes = likes.stream().filter(like -> like.getOwnerId() == groupId).collect(Collectors.toList());
 
                     if (!selectedPosts.isEmpty() || !selectedComments.isEmpty() || !selectedAnswers.isEmpty() || !selectedLikes.isEmpty()) {
-                        System.out.println("<<< " + name + " >>>");
-                        printItems(selectedPosts, searchType, a -> usersMap.get(((WallPost)a).getSignerId()));
-                        printItems(selectedComments, searchType, a -> usersMap.get(((WallPostComment)a).getFromId()));
+                        out.println("<<< " + name + " >>>");
+                        printItems(out, selectedPosts, searchType, a -> usersMap.get(((WallPost)a).getSignerId()));
+                        printItems(out, selectedComments, searchType, a -> usersMap.get(((WallPostComment)a).getFromId()));
                         if (so.getSearchType() != SearchOptions.SearchType.BY_PATTERN) {
-                            printItems(selectedAnswers, searchType, a -> usersMap.get(((WallPostComment)a).getReplyToUser()));
-                            printItems(selectedLikes, searchType, a -> usersMap.get(((WallPostLike)a).getUser()));
+                            printItems(out, selectedAnswers, searchType, a -> usersMap.get(((WallPostComment)a).getReplyToUser()));
+                            printItems(out, selectedLikes, searchType, a -> usersMap.get(((WallPostLike)a).getUser()));
                         }
-                        System.out.println(LINE_SEPARATOR + LINE_SEPARATOR);
+                        out.println(LINE_SEPARATOR + LINE_SEPARATOR);
                     }
                 }
                 for (Map.Entry<Board, String> boardEntry : so.getTopicTitles().entrySet()) {
@@ -76,44 +79,40 @@ public class PrintUtils {
                     List<BoardComment> selectedBoardComments = boardComments.stream().filter(comment -> comment.getGroupId() == board.getGroupId() && comment.getTopicId() == board.getTopicId()).collect(Collectors.toList());
 
                     if (!selectedBoardComments.isEmpty()) {
-                        System.out.println("<<< " + name + " >>>");
-                        printItems(selectedBoardComments, searchType, a -> usersMap.get(((BoardComment) a).getFromId()));
+                        out.println("<<< " + name + " >>>");
+                        printItems(out, selectedBoardComments, searchType, a -> usersMap.get(((BoardComment) a).getFromId()));
                     }
                 }
             } else {
-                System.out.println(posts.size() + " posts found!" + LINE_SEPARATOR);
-                printItems(posts, searchType, a -> usersMap.get(((WallPost)a).getSignerId()));
+                out.println(posts.size() + " posts found!" + LINE_SEPARATOR);
+                printItems(out, posts, searchType, a -> usersMap.get(((WallPost)a).getSignerId()));
 
-                System.out.println(LINE_SEPARATOR + LINE_SEPARATOR + comments.size() + " comments found!"
-                        + LINE_SEPARATOR);
-                printItems(comments, searchType, a -> usersMap.get(((WallPostComment)a).getFromId()));
+                out.println(LINE_SEPARATOR + LINE_SEPARATOR + comments.size() + " comments found!" + LINE_SEPARATOR);
+                printItems(out, comments, searchType, a -> usersMap.get(((WallPostComment)a).getFromId()));
 
-                System.out.println(LINE_SEPARATOR + LINE_SEPARATOR + boardComments.size() + " board comments found!"
-                        + LINE_SEPARATOR);
-                printItems(boardComments, searchType, a -> usersMap.get(((BoardComment)a).getFromId()));
+                out.println(LINE_SEPARATOR + LINE_SEPARATOR + boardComments.size() + " board comments found!" + LINE_SEPARATOR);
+                printItems(out, boardComments, searchType, a -> usersMap.get(((BoardComment)a).getFromId()));
 
                 if (so.getSearchType() != SearchOptions.SearchType.BY_PATTERN) {
-                    System.out.println(LINE_SEPARATOR + LINE_SEPARATOR + answers.size() + " answers found!"
-                            + LINE_SEPARATOR);
-                    printItems(answers, searchType, a -> usersMap.get(((WallPostComment)a).getReplyToUser()));
+                    out.println(LINE_SEPARATOR + LINE_SEPARATOR + answers.size() + " answers found!" + LINE_SEPARATOR);
+                    printItems(out, answers, searchType, a -> usersMap.get(((WallPostComment)a).getReplyToUser()));
 
-                    System.out.println(LINE_SEPARATOR + LINE_SEPARATOR + likes.size() + " post likes found!"
-                            + LINE_SEPARATOR);
-                    printItems(likes, searchType, a -> usersMap.get(((WallPostLike)a).getUser()));
+                    out.println(LINE_SEPARATOR + LINE_SEPARATOR + likes.size() + " post likes found!" + LINE_SEPARATOR);
+                    printItems(out, likes, searchType, a -> usersMap.get(((WallPostLike)a).getUser()));
                 }
             }
-        } finally {
-            System.setOut(standard);
+        } catch (UnsupportedEncodingException e) {
+            throw new IllegalStateException("Encoding is not supported", e);
         }
     }
 
-    private static void printItems(List<? extends BaseSearchableEntity> items, SearchOptions.SearchType searchType, Function<BaseSearchableEntity, User> f) {
+    private static void printItems(PrintStream out, List<? extends BaseSearchableEntity> items, SearchOptions.SearchType searchType, Function<BaseSearchableEntity, User> f) {
         for (BaseSearchableEntity w : items) {
             if (searchType == SearchOptions.SearchType.BY_ID_MULTIPLE && f != null) {
-                System.out.println(f.apply(w));
+                out.println(f.apply(w));
             }
-            w.print(System.out);
-            System.out.print(System.lineSeparator());
+            w.print(out);
+            out.print(System.lineSeparator());
         }
     }
 }

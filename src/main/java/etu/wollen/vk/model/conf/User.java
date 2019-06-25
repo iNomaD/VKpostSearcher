@@ -16,14 +16,6 @@ public final class User {
 		return id;
 	}
 
-	public String getFirstName() {
-		return firstName;
-	}
-	
-	public String getLastName() {
-		return lastName;
-	}
-
 	@Override
 	public String toString() {
 		return id + "{"+firstName+" "+lastName+"}";

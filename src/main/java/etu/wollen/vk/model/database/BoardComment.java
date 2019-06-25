@@ -27,40 +27,20 @@ public class BoardComment extends BaseSearchableEntity {
         return commentId;
     }
 
-    public void setCommentId(long commentId) {
-        this.commentId = commentId;
-    }
-
     public long getGroupId() {
         return groupId;
-    }
-
-    public void setGroupId(long groupId) {
-        this.groupId = groupId;
     }
 
     public long getTopicId() {
         return topicId;
     }
 
-    public void setTopicId(long topicId) {
-        this.topicId = topicId;
-    }
-
     public long getFromId() {
         return fromId;
     }
 
-    public void setFromId(long fromId) {
-        this.fromId = fromId;
-    }
-
     public String getText() {
         return text;
-    }
-
-    public void setText(String text) {
-        this.text = text;
     }
 
     public String getUrl(){

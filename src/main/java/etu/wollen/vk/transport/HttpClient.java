@@ -1,14 +1,5 @@
 package etu.wollen.vk.transport;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
-
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -16,6 +7,14 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
 
 import static etu.wollen.vk.conf.Config.HTTP_MAX_ATTEMPTS;
 
@@ -24,13 +23,9 @@ public class HttpClient {
 	// workaround for certificates (not for production!)
     private static class TrustAnyTrustManager implements X509TrustManager { 
     	  
-        public void checkClientTrusted(X509Certificate[] chain, String authType) 
-                throws CertificateException { 
-        } 
+        public void checkClientTrusted(X509Certificate[] chain, String authType){}
   
-        public void checkServerTrusted(X509Certificate[] chain, String authType) 
-                throws CertificateException { 
-        } 
+        public void checkServerTrusted(X509Certificate[] chain, String authType) {}
   
         public X509Certificate[] getAcceptedIssuers() { 
             return new X509Certificate[] {}; 
@@ -86,7 +81,7 @@ public class HttpClient {
 		conn.setSSLSocketFactory(socketFactory); 
 		conn.setHostnameVerifier(hostnameVerifier); 
 		conn.setRequestMethod("GET");
-		BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+		BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
 		StringBuilder result = new StringBuilder(conn.getContentLength());
 		char[] cbuf = new char[1024];
 		int len;

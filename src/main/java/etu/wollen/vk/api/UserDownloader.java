@@ -30,12 +30,12 @@ public class UserDownloader {
         String request = String.format(REQUEST_USERS_GET, String.join(",", ids), access_token);
         String response = HttpClient.getInstance().httpGet(request);
         JSONParser jp = new JSONParser();
-        JSONObject jsonresponse = (JSONObject) jp.parse(response);
-        JSONArray resp = (JSONArray) jsonresponse.get("response");
+        JSONObject jsonResponse = (JSONObject) jp.parse(response);
+        JSONArray resp = (JSONArray) jsonResponse.get("response");
         if (resp != null) {
             List<User> users = new ArrayList<>();
-            for (int i=0; i<resp.size(); ++i){
-                JSONObject user = (JSONObject)resp.get(i);
+            for (Object o : resp) {
+                JSONObject user = (JSONObject) o;
                 long id = (long) user.get("id");
                 String first = (String) user.get("first_name");
                 String last = (String) user.get("last_name");
@@ -44,7 +44,7 @@ public class UserDownloader {
             return users;
         }
         else {
-            JSONObject error = (JSONObject) jsonresponse.get("error");
+            JSONObject error = (JSONObject) jsonResponse.get("error");
             long error_code = (long) error.get("error_code");
             if (error_code == INVALID_USER_ID_CODE) {
                 return null;
@@ -62,8 +62,8 @@ public class UserDownloader {
         if (resp != null){
             JSONArray items = (JSONArray)resp.get("items");
             List<String> ids = new ArrayList<>();
-            for (int i=0; i<items.size(); ++i){
-                long id = (long) items.get(i);
+            for (Object item : items) {
+                long id = (long) item;
                 ids.add(Long.toString(id));
             }
             return !ids.isEmpty() ? getUsers(ids) : new ArrayList<>();

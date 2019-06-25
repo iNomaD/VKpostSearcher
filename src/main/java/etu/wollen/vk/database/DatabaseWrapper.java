@@ -48,7 +48,7 @@ public class DatabaseWrapper {
         return connection;
     }
 
-    public Connection getConnection() throws SQLException {
+    Connection getConnection() throws SQLException {
         if (conn == null) {
             try {
                 conn = connect();
@@ -61,7 +61,7 @@ public class DatabaseWrapper {
         return conn;
     }
 
-    public void closeConnection() throws SQLException {
+    void closeConnection() throws SQLException {
         if(conn != null) {
             conn.close();
             System.out.println("Database closed: " + databaseFilename);

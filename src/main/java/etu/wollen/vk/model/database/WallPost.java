@@ -28,32 +28,16 @@ public class WallPost extends BaseSearchableEntity {
 		return postId;
 	}
 
-	public void setPostId(long postId) {
-		this.postId = postId;
-	}
-
 	public long getGroupId() {
 		return groupId;
-	}
-
-	public void setGroupId(long groupId) {
-		this.groupId = groupId;
 	}
 
 	public long getSignerId() {
 		return signerId;
 	}
 
-	public void setSignerId(long signerId) {
-		this.signerId = signerId;
-	}
-
 	public String getText() {
 		return text;
-	}
-
-	public void setText(String text) {
-		this.text = text;
 	}
 
 	@Override

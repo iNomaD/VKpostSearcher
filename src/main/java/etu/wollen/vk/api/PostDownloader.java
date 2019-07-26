@@ -7,7 +7,7 @@ import etu.wollen.vk.model.database.BoardComment;
 import etu.wollen.vk.model.database.WallPost;
 import etu.wollen.vk.model.database.WallPostComment;
 import etu.wollen.vk.model.database.WallPostLike;
-import etu.wollen.vk.transport.HttpClient;
+import etu.wollen.vk.transport.VkHttpClient;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -146,7 +146,7 @@ public class PostDownloader {
 			String groups = String.join(",", groupShortNames);
 			String request = String.format(REQUEST_GROUPS_GET_BY_ID, groups, accessToken);
 			try {
-				String response = HttpClient.getInstance().httpGet(request);
+				String response = VkHttpClient.getInstance().httpGet(request);
 				JSONParser jp = new JSONParser();
 				JSONObject jsonResponse = (JSONObject) jp.parse(response);
 				JSONArray items = (JSONArray) jsonResponse.get("response");
@@ -181,7 +181,7 @@ public class PostDownloader {
 			for (Board board : boards) {
 				String request = String.format(REQUEST_BOARD_GET_TOPICS, board.getGroupId(), board.getTopicId(), accessToken);
 				try {
-					String response = HttpClient.getInstance().httpGet(request);
+					String response = VkHttpClient.getInstance().httpGet(request);
 					JSONParser jp = new JSONParser();
 					JSONObject jsonResponse = (JSONObject) jp.parse(response);
 					JSONObject resp = (JSONObject) jsonResponse.get("response");
@@ -228,7 +228,7 @@ public class PostDownloader {
 				final AtomicReference<Exception> nestedThreadException = new AtomicReference<>(null);
 
 				String request = String.format(REQUEST_WALL_GET, wallId, offset, accessToken);
-				String response = HttpClient.getInstance().httpGet(request);
+				String response = VkHttpClient.getInstance().httpGet(request);
 				offset += GET_POSTS_COUNT;
 
 				JSONParser jp = new JSONParser();
@@ -354,7 +354,7 @@ public class PostDownloader {
 			while (!readFinished) {
 				final List<BoardComment> commentsToCommit = new ArrayList<>();
 				String request = String.format(REQUEST_BOARD_GET_COMMENTS, groupId, topicId, offset, accessToken);
-				String response = HttpClient.getInstance().httpGet(request);
+				String response = VkHttpClient.getInstance().httpGet(request);
 				offset += GET_BOARD_COMMENTS_COUNT;
 
 				JSONParser jp = new JSONParser();
@@ -442,7 +442,7 @@ public class PostDownloader {
 				String request = String.format(REQUEST_WALL_GET_COMMENTS, wallId, postId, offset, accessToken);
 				String response = null;
 				try {
-					response = HttpClient.getInstance().httpGet(request);
+					response = VkHttpClient.getInstance().httpGet(request);
 
 					JSONParser jp = new JSONParser();
 					JSONObject jsonResponse = (JSONObject) jp.parse(response);
@@ -506,7 +506,7 @@ public class PostDownloader {
 				String request = String.format(REQUEST_LIKES_GET_LIST, wallId, postId, offset, accessToken);
 				String response = null;
 				try {
-					response = HttpClient.getInstance().httpGet(request);
+					response = VkHttpClient.getInstance().httpGet(request);
 
 					JSONParser jp = new JSONParser();
 					JSONObject jsonResponse = (JSONObject) jp.parse(response);

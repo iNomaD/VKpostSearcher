@@ -11,7 +11,7 @@ import etu.wollen.vk.model.conf.Board;
 import etu.wollen.vk.model.conf.SearchOptions;
 import etu.wollen.vk.model.conf.User;
 import etu.wollen.vk.model.database.*;
-import etu.wollen.vk.transport.HttpClient;
+import etu.wollen.vk.transport.VkHttpClient;
 import etu.wollen.vk.utils.PrintUtils;
 
 import java.io.FileNotFoundException;
@@ -45,8 +45,8 @@ public class PostSearcher {
 			DatabaseUtils.createDB();
 
 			// parse config from initial file
-			HttpClient.getInstance().setDebugEnabled(debugEnabled);
-			HttpClient.getInstance().setDelay(privateGroupsEnabled ? Config.HTTP_DELAY : 0);
+			VkHttpClient.getInstance().setDebugEnabled(debugEnabled);
+			VkHttpClient.getInstance().setDelay(privateGroupsEnabled ? Config.HTTP_DELAY : 0);
 			ConfigParser configParser = new ConfigParser();
 			Config config = configParser.parseFileGroups(INITIAL_FILE_NAME);
 

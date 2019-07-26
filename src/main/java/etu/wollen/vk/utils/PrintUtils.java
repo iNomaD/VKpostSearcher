@@ -12,7 +12,7 @@ import etu.wollen.vk.model.database.WallPostLike;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.PrintStream;
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -21,7 +21,6 @@ import java.util.stream.Collectors;
 public class PrintUtils {
 
     private static final String LINE_SEPARATOR = System.lineSeparator();
-    private static final String ENCODING_UTF8 = "UTF-8";
 
     public static void printToFile(SearchOptions so, boolean cluster, List<WallPost> posts, List<WallPostComment> comments,
                                    List<BoardComment> boardComments, List<WallPostComment> answers, List<WallPostLike> likes,
@@ -29,7 +28,7 @@ public class PrintUtils {
 
         Map<Long, User> usersMap = so.getFindUsers();
         SearchOptions.SearchType searchType = so.getSearchType();
-        try (PrintStream out = new PrintStream(new FileOutputStream(outputFileName), true, ENCODING_UTF8)) {
+        try (PrintStream out = new PrintStream(new FileOutputStream(outputFileName), true, StandardCharsets.UTF_8)) {
             switch (searchType){
                 case BY_ID_SINGLE:
                     out.println("User: " + usersMap.values().iterator().next() + LINE_SEPARATOR);
@@ -101,8 +100,6 @@ public class PrintUtils {
                     printItems(out, likes, searchType, a -> usersMap.get(((WallPostLike)a).getUser()));
                 }
             }
-        } catch (UnsupportedEncodingException e) {
-            throw new IllegalStateException("Encoding is not supported", e);
         }
     }
 

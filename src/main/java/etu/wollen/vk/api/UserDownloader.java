@@ -1,7 +1,7 @@
 package etu.wollen.vk.api;
 
 import etu.wollen.vk.model.conf.User;
-import etu.wollen.vk.transport.HttpClient;
+import etu.wollen.vk.transport.VkHttpClient;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -28,7 +28,7 @@ public class UserDownloader {
 
     public List<User> getUsers(List<String> ids) throws Exception {
         String request = String.format(REQUEST_USERS_GET, String.join(",", ids), access_token);
-        String response = HttpClient.getInstance().httpGet(request);
+        String response = VkHttpClient.getInstance().httpGet(request);
         JSONParser jp = new JSONParser();
         JSONObject jsonResponse = (JSONObject) jp.parse(response);
         JSONArray resp = (JSONArray) jsonResponse.get("response");
@@ -55,7 +55,7 @@ public class UserDownloader {
 
     public List<User> getFriends(User user) throws Exception{
         String request = String.format(REQUEST_FRIENDS_GET, user.getId(), MAX_FRIENDS, access_token);
-        String response = HttpClient.getInstance().httpGet(request);
+        String response = VkHttpClient.getInstance().httpGet(request);
         JSONParser jp = new JSONParser();
         JSONObject jsonresponse = (JSONObject) jp.parse(response);
         JSONObject resp = (JSONObject) jsonresponse.get("response");

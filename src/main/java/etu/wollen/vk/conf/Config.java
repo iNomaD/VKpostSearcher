@@ -12,6 +12,7 @@ public final class Config {
     public static final String PRINT_DATE_FORMAT = "dd.MM.yyyy 'at' HH:mm:ss";
     public static final int HTTP_DELAY = 334;
     public static final int HTTP_MAX_ATTEMPTS = 11;
+    public static final int HTTP_CONNECTION_TIMEOUT_SECONDS = 15;
 
     public static int PRIMARY_THREADS = 10;
     public static int SECONDARY_THREADS = 50;

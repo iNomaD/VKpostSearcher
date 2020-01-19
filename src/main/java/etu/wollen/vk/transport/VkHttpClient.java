@@ -7,10 +7,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 
+import static etu.wollen.vk.conf.Config.HTTP_CONNECTION_TIMEOUT_SECONDS;
 import static etu.wollen.vk.conf.Config.HTTP_MAX_ATTEMPTS;
 
 public class VkHttpClient {
-	private static final int TIMEOUT_SECONDS = 15;
     private HttpClient httpClient;
     private boolean debugEnabled = false;
     private int delayMillis = 0;
@@ -33,7 +33,7 @@ public class VkHttpClient {
     
     private VkHttpClient(){
 		httpClient = HttpClient.newBuilder()
-			.connectTimeout(Duration.ofSeconds(TIMEOUT_SECONDS))
+			.connectTimeout(Duration.ofSeconds(HTTP_CONNECTION_TIMEOUT_SECONDS))
 			.version(HttpClient.Version.HTTP_1_1)
 			.build();
     }

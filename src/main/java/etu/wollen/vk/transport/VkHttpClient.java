@@ -6,11 +6,15 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import static etu.wollen.vk.conf.Config.HTTP_MAX_ATTEMPTS;
 
 public class VkHttpClient {
+	private static Logger log = LogManager.getLogger(VkHttpClient.class);
 	private static final int TIMEOUT_SECONDS = 15;
+
     private HttpClient httpClient;
     private boolean debugEnabled = false;
     private int delayMillis = 0;
@@ -31,7 +35,7 @@ public class VkHttpClient {
 		return localInstance;
 	}
     
-    private VkHttpClient(){
+    private VkHttpClient() {
 		httpClient = HttpClient.newBuilder()
 			.connectTimeout(Duration.ofSeconds(TIMEOUT_SECONDS))
 			.version(HttpClient.Version.HTTP_1_1)
@@ -71,8 +75,9 @@ public class VkHttpClient {
 				break;
 			} catch (IOException e) {
 				if (i < HTTP_MAX_ATTEMPTS - 1) {
+					log.warn("Request timed out >>> {}", request);
 					// TODO logging with log4j
-					if(debugEnabled) {
+					if (debugEnabled) {
 						System.out.println("Request >>> " + request + System.lineSeparator());
 					}
 					System.out.println("Connection timed out... " + (HTTP_MAX_ATTEMPTS - i - 1) + " more attempts...");
@@ -81,6 +86,8 @@ public class VkHttpClient {
 				}
 			}
 		}
+		log.warn("Request >>> {}", request);
+		log.debug("Response <<< {}", response);
 		if (debugEnabled) {
 			System.out.println("Request >>> " + request + System.lineSeparator() + "Response <<< " + response);
 		}
